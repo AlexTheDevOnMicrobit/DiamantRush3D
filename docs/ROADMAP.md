@@ -1,7 +1,7 @@
-# Programme de la prochaine mise à jour (3.3.0) et notes de reprise
+# Programme de la prochaine mise à jour (3.5.0) et notes de reprise
 
-Dernière version publiée : **3.2.0** (`main` = tag `v3.2.0`). Ce fichier sert de point de reprise : il résume l'état du projet,
-ce qui reste à valider, et propose le contenu de la 3.3.0 par ordre de priorité.
+Dernière version publiée : **3.4.0** (`main` = tag `v3.4.0`). La 3.3.0 a apporté flèches de danger du boss, mode gaucher, effets réduits, code de sauvegarde et copie de secours ; la 3.4.0 le mode photo, les sous-titres sonores, le contraste élevé et la navigation manette dans les menus. Ce fichier sert de point de reprise : il résume l'état du projet,
+ce qui reste à valider, et propose le contenu de la 3.5.0 par ordre de priorité.
 
 ---
 
@@ -13,7 +13,7 @@ fantôme, étoiles, cosmétiques, 16 modificateurs, 29 succès, 6 langues, clavi
 
 **Fichiers clés** : `scripts/global.gd` (autoload : run, modes, défis, codes, options, audio, sauvegarde), `generator.gd` (parcours),
 `level_data.gd` (mondes), `level.gd` (étape), `player.gd`, `platform.gd` (18 types), `boss.gd`, `decor.gd`, `translations.gd`
-(généré), `tests/smoke.gd` (230 vérifications), `tests/bot.gd` (robot joueur), `tools/` (build, audio, captures), `docs/`.
+(généré), `tests/smoke.gd` (~250 vérifications), `tests/bot.gd` (robot joueur), `tools/` (build, audio, captures), `docs/`.
 
 **Commandes utiles** (toujours en `--headless`, aucune fenêtre) :
 
@@ -29,7 +29,7 @@ tools/build_all.sh windows linux web macos android           # exports (ou tools
 - Godot 4.3 utilisé pour les tests : `C:\gdt\Godot_v4.3-stable_win64_console.exe` (copie autonome, « Safe Save » désactivé car l'antivirus bloque les fichiers temporaires). Modèles d'export 4.3 installés ; Android : JDK de Android Studio + SDK + keystore debug.
 - Lancer Godot **sans** `--headless` ouvre une fenêtre : à éviter (sauf `tools/screenshots.gd`, volontairement visuel).
 - Les tests modifient la sauvegarde : supprimer `save.cfg` et `ghosts.dat` du dossier `%APPDATA%\Godot\app_userdata\Diamant Rush 3D\` après.
-- Les `git push` demandent l'accord explicite du propriétaire ; les tags suivent `vX.Y.Z` ; le CI GitHub (`.github/workflows/build.yml`) n'a jamais été vérifié sur GitHub.
+- Les `git push` se font à la demande du propriétaire (il a demandé « fais la mise à jour et push » pour 3.3.0 et 3.4.0) ; les tags suivent `vX.Y.Z` ; le CI GitHub (`.github/workflows/build.yml`) n'a jamais été vérifié sur GitHub.
 - Les traductions se régénèrent depuis un index numéroté (français → langues) : ajouter une chaîne = l'ajouter dans les 5 dictionnaires de `translations.gd`.
 
 ---
@@ -51,66 +51,54 @@ Rien de ce qui suit n'a été vérifié par un humain : le jeu n'a été testé 
 
 ---
 
-## 3. Contenu proposé pour la 3.3.0
+## 3. Contenu proposé pour la 3.5.0
 
-Objectif : **« Sensation de jeu et finition »** — consolider ce qui existe avant d'ajouter encore du contenu. Les blocs sont
-indépendants ; l'ordre ci-dessous est l'ordre conseillé.
+Déjà fait (3.3.0 / 3.4.0) : indicateur de danger, mode gaucher, effets réduits, export / import et copie de secours de la sauvegarde,
+mode photo, sous-titres sonores, contraste élevé, focus manette dans les menus. **Rien de tout cela n'a été essayé à la main.**
 
-### Bloc A — Finition et équilibrage (à faire en premier, dépend de V1 à V3)
+### Bloc A — Finition (toujours en premier, dépend de V1 à V3)
 
-- Corriger tout ce qui ressort de la session de jeu (V1) : réglages de caméra par défaut, vitesse, double saut, lisibilité.
-- Régler bumpers / glace / canons (V2) ; enseigner le robot de test à les contourner, pour retrouver un indicateur fiable (> 95 %).
-- Rééquilibrer les 5 boss (V3) et ajouter un **indicateur de danger** (flèche hors écran vers le prochain tir ou rayon).
-- Réglages de difficulté fins : le niveau « Détendu » doit permettre à un débutant de finir les 12 mondes.
-- Revue de performances (Android, Web) : profil des 3 pires mondes, limite de particules et de décors par appareil.
+- Session de jeu complète : caméra, vitesse, saut, lisibilité ; équilibrage des bumpers / glace / canons et des 5 boss.
+- Enseigner au robot de test à contourner les pièges pour retrouver un indicateur fiable (> 95 %).
+- Revue de performances (Android, Web) : profil des 3 pires mondes.
+- Vérifier les flèches de danger (taille, lisibilité, faux positifs) et le mode photo (capture réelle, hors headless).
 
-### Bloc B — Confort et accessibilité
+### Bloc B — Confort restant
 
-- **Navigation manette dans les menus** (focus, A / B), et remappage des boutons de la manette.
-- **Mode une main / disposition tactile gauchers** (inverser joystick et bouton de saut) et taille / position des boutons réglables.
-- Option **réduire les secousses et flashs** (particules, clignotement des dalles), contraste élevé pour le HUD.
-- **Sous-titres sonores** optionnels (« tir de canon à droite ») pour les joueurs sourds ou malentendants.
-- Sauvegarde : **export / import** du fichier de progression (copie manuelle) et sauvegarde de secours automatique.
+- Remappage des boutons de la manette ; taille / position réglables des boutons tactiles.
+- Navigation manette : retour avec B, focus visible plus marqué, sliders au D-pad.
+- Sous-titres : indiquer la direction (« à gauche »), couvrir plus de sons.
 
-### Bloc C — Nouveau contenu (si V1 à V3 sont réglés)
+### Bloc C — Contenu non commencé
 
-- **Mode « Contre-la-montre pur »** : une étape, un classement des meilleurs temps par seed, fantôme du record du jour.
-- **Défi de boss** : mode qui enchaîne les 5 boss avec une barre de vie persistante.
-- **Mode photo** dans la pause (cacher le HUD, caméra libre, capture enregistrée dans le dossier utilisateur).
-- **Nouveaux pièges** : plateforme qui rétrécit, aimant à pièces, zone de gravité inversée, tapis de vent.
-- **Monde 16 « Atelier »** : un monde-bac à sable pour s'entraîner à chaque type de dalle, avec les astuces intégrées (tutoriel).
-- **Saisonnier** : thèmes temporaires (couleurs / décors d'événement) sans changer le jeu.
+- **Contre-la-montre pur** (une étape, classement des temps par seed) et **défi de boss** (5 boss enchaînés, vie persistante).
+- **Nouveaux pièges** : plateforme qui rétrécit, aimant à pièces, gravité inversée, tapis de vent.
+- **Monde 16 « Atelier »** : bac à sable / tutoriel pour chaque type de dalle.
+- **Saisonnier** : thèmes temporaires.
 
 ### Bloc D — Audio (dépend des fichiers livrés)
 
-Voir `audio/README.md` (noms, durées, ambiances). Reste à fournir :
-
-- **Musiques (18)** : `menu`, `story`, `boss`, `world_01` … `world_15` (boucles sans coupure) ; jingles `win`, `run_complete` fournis, `lose` fourni (`loose`).
-- **Effets (8 nouveaux)** : `bumper`, `star`, `boss_wake`, `boss_shot`, `boss_beam`, `equip`, `streak`, `tip` (remplacent la synthèse).
-- Éventuellement : sons d'ambiance par monde (vent, océan, usine…) en boucle basse, `audio/ambience/` (à créer dans le code).
+Voir `audio/README.md`. À fournir : 18 musiques (`menu`, `story`, `boss`, `world_01` … `world_15`) et 8 effets (`bumper`, `star`,
+`boss_wake`, `boss_shot`, `boss_beam`, `equip`, `streak`, `tip`) ; ambiances par monde en option.
 
 ### Bloc E — Langues et audience
 
-- Langues à ajouter selon la demande : **néerlandais, polonais, russe, turc** (alphabet latin ou cyrillique, police par défaut suffisante).
-- **Japonais / chinois / coréen** : demandent une police bundlée (le jeu n'en embarque aucune) → ajouter une police sous licence libre pour que le Web et Android affichent les caractères.
-- Détection de la langue du navigateur pour la version Web.
+- Néerlandais, polonais, russe, turc ; japonais / chinois / coréen (police à embarquer) ; langue du navigateur pour le Web.
 
 ### Bloc F — Publication
 
-- Captures d'écran et bande-annonce (`tools/screenshots.gd`, `docs/STORE_PAGE.md`) ; page itch.io ; fiche Google Play (AAB signé, `docs/ANDROID.md`).
-- Signature et notarisation macOS (`docs/MACOS_SIGNING.md`) si compte Apple disponible.
-- Classement en ligne : **nécessite un serveur** (non prévu) ; alternative sans serveur : classement partageable par code (un code qui contient score + seed à coller).
+- Captures et bande-annonce, page itch.io, fiche Google Play (AAB signé), notarisation macOS, classement par code partageable (pas de serveur).
 
 ---
 
-## 4. Critères d'acceptation de la 3.3.0
+## 4. Critères d'acceptation de la 3.5.0
 
 - `tests/smoke.gd` : « TOUT PASSE » ; robot de test ≥ 95 % de parcours réussis (hors modificateurs extrêmes).
 - Une personne autre que le développeur finit l'Aventure en « Détendu » sans aide.
 - APK testé sur au moins 2 téléphones (un bas de gamme) : 30 images par seconde en qualité Basse, commandes lisibles.
 - Aucun texte tronqué dans les 6 langues (V7), toutes relues (V6).
 - Version Web jouable dans Chrome et Firefox, audio compris.
-- CHANGELOG, README et `docs/STORE_PAGE.md` à jour ; tag `v3.3.0` poussé et CI verte.
+- CHANGELOG, README et `docs/STORE_PAGE.md` à jour ; tag `v3.5.0` poussé et CI verte.
 
 ---
 

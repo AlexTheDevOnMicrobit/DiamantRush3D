@@ -69,6 +69,10 @@ var lbl_hint: Label
 var lbl_wind: Label
 var lbl_effects: Label
 var lbl_toast: Label
+var _photo_msg: Label
+var last_photo := ""
+var lbl_caption: Label
+var hud_layer: CanvasLayer
 var lbl_boss: Label
 var lbl_extra: Label
 var toast_queue: Array = []
@@ -298,6 +302,7 @@ func _build_scenery() -> void:
 func _build_ui() -> void:
 	var m := Global.safe_margins()
 	var hud := CanvasLayer.new()
+	hud_layer = hud
 	add_child(hud)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -353,6 +358,10 @@ func _build_ui() -> void:
 	lbl_toast = UI.label("", 26, Color(1.0, 0.9, 0.4), HORIZONTAL_ALIGNMENT_CENTER)
 	lbl_toast.modulate.a = 0.0
 	root.add_child(lbl_toast)
+	lbl_caption = UI.label("", 24, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER)
+	lbl_caption.modulate.a = 0.0
+	root.add_child(lbl_caption)
+	Global.caption.connect(_on_caption)
 	var hint := tr("WASD / ZQSD / flèches : bouger   •   Espace : sauter (double saut)   •   Souris : caméra   •   Échap : pause   •   R : recommencer l'étape")
 	if Global.use_touch_controls():
 		hint = tr("Joystick à gauche : bouger   •   SAUT à droite (appuie en l'air : double saut)   •   Glisse à droite : caméra")
@@ -371,6 +380,7 @@ func _build_ui() -> void:
 
 	overlay = Overlay.new()
 	overlay.pause_toggled.connect(_toggle_pause)
+	overlay.photo_shot.connect(_take_photo)
 	add_child(overlay)
 
 	if Global.use_touch_controls():
@@ -752,9 +762,63 @@ func _toggle_pause() -> void:
 			touch.set_active(false)
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_show_panel(tr("Pause"), [tr("Modificateurs : ") + Global.mod_summary()],
-			[[tr("Reprendre"), _resume], [tr("Recommencer l'étape"), _restart], [tr("Abandonner la run (menu)"), _abandon]])
+			_pause_buttons())
 	elif state == "paused":
 		_resume()
+	elif state == "photo":
+		_end_photo()
+
+
+func _pause_buttons() -> Array:
+	var b: Array = [[tr("Reprendre"), _resume], [tr("Recommencer l'étape"), _restart]]
+	if not Global.use_touch_controls():
+		b.append([tr("Mode photo"), _start_photo])
+	b.append([tr("Abandonner la run (menu)"), _abandon])
+	return b
+
+
+func _start_photo() -> void:
+	_clear_panel()
+	state = "photo"
+	hud_layer.visible = false
+	_photo_msg = UI.label(tr("Mode photo : Espace ou Entrée = capture, Échap = retour"), 22, Color(1, 1, 1), HORIZONTAL_ALIGNMENT_CENTER)
+	_photo_msg.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_photo_msg.position.y -= 40
+	overlay.add_child(_photo_msg)
+	panel_nodes.append(_photo_msg)
+
+
+func _end_photo() -> void:
+	_clear_panel()
+	hud_layer.visible = true
+	state = "paused"
+	_show_panel(tr("Pause"), [tr("Modificateurs : ") + Global.mod_summary()], _pause_buttons())
+
+
+func _take_photo() -> void:
+	if state != "photo":
+		return
+	if _photo_msg:
+		_photo_msg.visible = false
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	DirAccess.make_dir_recursive_absolute("user://photos")
+	var path := "user://photos/photo_%d.png" % Time.get_unix_time_from_system()
+	if img and not img.is_empty() and img.save_png(path) == OK:
+		last_photo = path
+	if _photo_msg:
+		_photo_msg.text = tr("Photo enregistrée dans le dossier utilisateur (photos).") if last_photo != "" else tr("Échec de la capture.")
+		_photo_msg.visible = true
+
+
+func _on_caption(text: String) -> void:
+	if lbl_caption == null or not is_instance_valid(lbl_caption):
+		return
+	lbl_caption.text = text
+	lbl_caption.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_interval(1.2)
+	tw.tween_property(lbl_caption, "modulate:a", 0.0, 0.4)
 
 
 func _resume() -> void:

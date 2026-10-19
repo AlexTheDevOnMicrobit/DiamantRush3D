@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.4.0
+
+### Nouveau
+- **Mode photo** (PC) dans la pause : interface masquée, capture PNG dans `photos/`.
+- **Sous-titres sonores** (option) : 12 bruits importants décrits à l'écran, traduits dans les 6 langues.
+- **Contraste élevé** (option) pour les textes de l'interface.
+- **Navigation à la manette et au clavier** dans tous les menus (focus automatique sur le premier bouton).
+
+### Corrigé
+- Les options *Effets réduits*, *Flèches de danger* et *Commandes pour gaucher* annoncées en 3.3.0 n'apparaissaient pas dans l'écran Accessibilité : elles y sont maintenant.
+
+### Vérifié
+- `tests/smoke.gd` : sous-titres, contraste, mode photo et flèches de danger testés. Non vérifié à la main : rendu visuel, capture d'écran réelle (impossible en headless), manette physique.
+
 ## 3.3.0
 
 Mise à jour « confort et finition ».

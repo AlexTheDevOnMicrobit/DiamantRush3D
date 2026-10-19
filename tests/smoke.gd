@@ -622,6 +622,38 @@ func _test_backup() -> void:
 	tc.queue_free()
 	g.options["lefty"] = false
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(g.BACKUP_PATH))
+	# 3.4 : sous-titres, mode photo, danger du boss, contraste
+	var got: Array = []
+	g.caption.connect(func(t): got.append(t))
+	g.options["captions"] = false
+	g.play_sfx("cannon")
+	check(got.is_empty(), "pas de sous-titre quand l'option est coupée")
+	g.options["captions"] = true
+	g.play_sfx("cannon")
+	check(got.size() == 1 and String(got[0]).begins_with("["), "sous-titre émis pour un tir de canon")
+	g.options["captions"] = false
+	g.options["contrast"] = true
+	var lab = load("res://scripts/ui.gd").label("x")
+	check(lab.get_theme_constant("outline_size") == 10, "contraste élevé : contour renforcé")
+	g.options["contrast"] = false
+	g.reset_mods(false)
+	g.reset_run(777)
+	g.run["stages"] = [2]
+	g.run["mode"] = "free"
+	var lv = load("res://scenes/level.tscn").instantiate()
+	root.add_child(lv)
+	await physics_frame
+	var arrows: Array = lv.get_children().filter(func(c): return c.get_script() != null and String(c.get_script().resource_path).ends_with("danger_arrows.gd"))
+	check(arrows.size() == 1, "flèches de danger présentes dans l'étape de boss")
+	lv._toggle_pause()
+	check(lv.state == "paused", "pause activée")
+	lv._start_photo()
+	check(lv.state == "photo" and not lv.hud_layer.visible, "mode photo : HUD masqué")
+	lv._toggle_pause()
+	check(lv.state == "paused" and lv.hud_layer.visible, "retour du mode photo vers la pause")
+	lv._resume()
+	lv.queue_free()
+	await process_frame
 
 
 # ---------------------------------------------------------------- menus

@@ -104,6 +104,18 @@ func _show(page_name: String) -> void:
 		page_roots[k].visible = (k == page_name)
 	if page_roots.has(page_name):
 		(page_roots[page_name] as ScrollContainer).scroll_vertical = 0
+		_focus_first.call_deferred(pages[page_name])
+
+
+## Donne le focus au premier bouton : la manette et le clavier peuvent alors naviguer dans les menus.
+func _focus_first(n: Node) -> bool:
+	for c in n.get_children():
+		if c is BaseButton and (c as Control).focus_mode != Control.FOCUS_NONE:
+			(c as Control).grab_focus.call_deferred()
+			return true
+		if _focus_first(c):
+			return true
+	return false
 
 
 func _clear(page: Control) -> VBoxContainer:
@@ -557,6 +569,11 @@ func _build_access() -> void:
 		["assist", "Aide au saut (plus de temps pour sauter après le bord)"],
 		["colorblind", "Mode daltonien (couleurs adaptées + symboles)"],
 		["symbols", "Symboles sur les dalles spéciales"],
+		["calm", "Effets réduits (pas de clignotement)"],
+		["danger", "Flèches de danger pour les tirs du boss hors écran"],
+		["lefty", "Commandes tactiles pour gaucher (inversées)"],
+		["captions", "Sous-titres sonores (décrire les bruits importants)"],
+		["contrast", "Contraste élevé (textes de l'interface plus lisibles)"],
 	]:
 		var cb := CheckButton.new()
 		cb.text = tr(String(entry[1]))

@@ -4,7 +4,7 @@ Platformeur 3D low-poly réalisé avec **Godot 4.3**. Tu incarnes **Lumi**, un p
 
 Tout est généré par code : **aucun asset externe** (modèles, textures, sons, musiques, particules). Tu peux déposer tes propres musiques et sons dans `audio/` (voir [audio/README.md](audio/README.md)).
 
-- Version : **3.3.0** (voir [CHANGELOG.md](CHANGELOG.md))
+- Version : **3.4.0** (voir [CHANGELOG.md](CHANGELOG.md))
 - Plateformes : Windows, Linux, macOS, Web, **Android** (et iOS avec un Mac)
 - Contrôles : clavier / souris, manette, écran tactile
 - Langues : **6** — français, English, español, Deutsch, italiano, português (Brésil)
@@ -234,10 +234,16 @@ Un ami le colle dans *Utiliser* pour jouer exactement la même run, avec les mê
 - **Effets réduits** : plus de clignotement de Lumi après un coup.
 - **Flèches de danger** : pendant un combat de boss, une flèche rouge au bord de l'écran indique chaque tir hors champ (désactivable).
 - **Commandes tactiles pour gaucher** : joystick à droite, saut et pause à gauche.
+- **Sous-titres sonores** : décrit à l'écran les bruits importants (canon, tirs et rayon du boss, dalle qui s'effondre, coup, bumper…).
+- **Contraste élevé** : contours renforcés sur tous les textes de l'interface.
 - **Taille du texte** : 80 % à 160 %.
 - **Touches du clavier réassignables** (les flèches et la manette restent actives), avec un bouton de remise à zéro.
 
 ---
+
+**Mode photo** : dans le menu Pause (PC), *Mode photo* masque l'interface ; Espace ou Entrée enregistre une capture PNG dans le dossier utilisateur (`photos/`), Échap revient à la pause.
+
+**Menus à la manette / au clavier** : le premier bouton de chaque page a le focus ; D-pad ou flèches pour naviguer, A ou Entrée pour valider.
 
 **Sauvegarde** (Options → *Sauvegarde : copier / restaurer*) : le jeu garde une **copie de secours** (`save.bak`) à chaque lancement et la relit si `save.cfg` est illisible. Le même écran affiche un **code de sauvegarde** (commence par `DR3-`) à copier pour transférer ta progression et tes options vers un autre appareil, puis à coller et restaurer ; un code invalide ne change rien.
 
@@ -389,7 +395,7 @@ GODOT=/chemin/godot tools/build_all.sh windows linux web macos          # Linux 
 .\tools\build_all.ps1 -Godot "C:\chemin\Godot_v4.3-stable_win64_console.exe"   # Windows
 ```
 
-Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-3.3.0-windows.zip`, `-linux`, `-web`, `-macos`, `-android.apk`).
+Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-3.4.0-windows.zip`, `-linux`, `-web`, `-macos`, `-android.apk`).
 
 | Cible | Résultat | Remarque |
 |---|---|---|
@@ -404,7 +410,7 @@ Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-
 Le workflow [.github/workflows/build.yml](.github/workflows/build.yml) lance les tests puis construit toutes les versions et les joint à une **Release** quand tu pousses un tag :
 
 ```bash
-git tag v3.3.0 && git push origin v3.3.0
+git tag v3.4.0 && git push origin v3.4.0
 ```
 
 ### Page de boutique

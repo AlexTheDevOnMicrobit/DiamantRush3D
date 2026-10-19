@@ -2,7 +2,7 @@ extends Node
 ## Autoload : run en cours, modes, progression, sauvegarde, options, modificateurs,
 ## succès, apparences, défis, codes de partage, fantômes, classement, audio.
 
-const VERSION := "3.3.0"
+const VERSION := "3.4.0"
 const REPO := "AlexTheDevOnMicrobit/DiamantRush3D"
 const SAVE_PATH := "user://save.cfg"
 const BACKUP_PATH := "user://save.bak"
@@ -115,6 +115,15 @@ var _ghosts: Dictionary = {}
 var _ghosts_loaded := false
 var _backup_done := false
 
+signal caption(text: String)
+
+## Sous-titres sonores : effets qui méritent une description écrite
+const CAPTIONS := {
+	"cannon": "[Tir de canon]", "boss_shot": "[Tir du boss]", "boss_beam": "[Rayon du boss]", "boss_wake": "[Le boss se réveille]",
+	"crumble": "[Dalle qui s'effondre]", "hit": "[Lumi est touché]", "bumper": "[Bumper]", "launch": "[Lanceur]",
+	"portal": "[Portail]", "bounce": "[Trampoline]", "fall": "[Chute dans le vide]", "checkpoint": "[Checkpoint]",
+}
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -214,7 +223,7 @@ func reset_options() -> void:
 		"assist": false, "symbols": false, "colorblind": false,
 		"text_scale": 1.0, "ghost": true, "updates": true,
 		"language": "auto", "keymap": {}, "hat": "none", "trail": "none", "tips": true,
-		"lefty": false, "calm": false, "danger": true,
+		"lefty": false, "calm": false, "danger": true, "captions": false, "contrast": false,
 	}
 
 
@@ -886,6 +895,8 @@ func _setup_audio() -> void:
 func play_sfx(sfx_name: String, pitch: float = 1.0, db: float = 0.0) -> void:
 	if not sounds.has(sfx_name):
 		return
+	if options["captions"] and CAPTIONS.has(sfx_name):
+		caption.emit(tr(String(CAPTIONS[sfx_name])))
 	for p in _sfx_players:
 		if not p.playing:
 			p.stream = sounds[sfx_name]

@@ -9,7 +9,9 @@ static func label(text: String, size: int = 22, color: Color = Color.WHITE, alig
 	l.add_theme_font_size_override("font_size", int(size * float(Global.options["text_scale"])))
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	l.add_theme_constant_override("outline_size", 5)
+	l.add_theme_constant_override("outline_size", 10 if Global.options["contrast"] else 5)
+	if Global.options["contrast"]:
+		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	return l
 
 
