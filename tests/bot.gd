@@ -45,6 +45,7 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 	var jump_hold := 0
 	var last_deaths := 0
 	var pending := false
+	var reached_arena := false
 	var last_pp := Vector3.ZERO
 	var kinds = lv.data["steps"]
 	var plats = lv.platforms
@@ -71,9 +72,14 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 			for i in range(n - 1, -1, -1):
 				var p = lv.platforms[i]
 				var loc = pp - p.global_position
-				if absf(loc.x) <= p.size.x / 2.0 + 0.3 and absf(loc.z) <= p.size.z / 2.0 + 0.3 and (pp.y - (p.global_position.y + 0.5)) < (0.6 if (pl.is_on_floor() or p.kind != 'b') else (9.0 if cur == i else 1.3)) and (pp.y - (p.global_position.y + 0.5)) > -0.6:
+				if (pl.is_on_floor() or p.kind == 'b') and absf(loc.x) <= p.size.x / 2.0 + 0.3 and absf(loc.z) <= p.size.z / 2.0 + 0.3 and (pp.y - (p.global_position.y + 0.5)) < (0.6 if (pl.is_on_floor() or p.kind != 'b') else (9.0 if cur == i else 1.3)) and (pp.y - (p.global_position.y + 0.5)) > -0.6:
 					cur = i; break
+		if lv.boss != null and cur == n - 1:
+			reached_arena = true
+			break
 		var ti: int = mini(cur + 1, n - 1)
+		if str(plats[cur].kind) == 'p':
+			ti = cur # on marche jusqu'au centre pour déclencher le portail
 		var tp: Vector3 = lv.platforms[ti].global_position + Vector3(0, 0.5, 0)
 		var flat := Vector3(tp.x - pp.x, 0, tp.z - pp.z)
 		var dist := flat.length()
@@ -95,7 +101,7 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 			elif outside and ti != cur:
 				var tg: float = 3.0 if ti == 0 else float(kinds[ti - 1][0])
 				var nominal := Vector2(tpl._origin.x - pp.x, tpl._origin.z - pp.z).length()
-				var stable: bool = str(cp.kind) in ['n', 'c', 's', 'v', 'b']
+				var stable: bool = str(cp.kind) in ['n', 'c', 's', 'v', 'b', 'y', 't', 'j', 'p', 'q']
 				if not stable:
 					want_jump = true # on n'attend pas sur une dalle instable
 				elif tkind == "m" and dist > tg + 3.2:
@@ -104,7 +110,7 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 					move = false
 				elif tkind == "l" and absf(tpl.global_position.y - tpl._origin.y) > 0.6:
 					move = false
-				elif tkind == "k" and tpl.solid_time_left() < 1.1:
+				elif (tkind == "k" or tkind == "z") and tpl.solid_time_left() < 1.1:
 					move = false
 				else:
 					want_jump = true
@@ -116,8 +122,15 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 			var thalf: float = 2.0
 			if pl.velocity.y < 0.5 and pl.air_jumps > 0 and beyond and dist > thalf + 1.3 and pp.y < tp.y + 1.0:
 				want_jump = true
-			elif pl.velocity.y < -1.0 and pl.air_jumps > 0 and pp.y < tp.y + 0.3 and dist > 0.8 and pp.y < ctop - 0.8:
+			elif pl.velocity.y < -1.0 and pl.air_jumps > 0 and pp.y < tp.y + 0.8 and dist > 0.8 and (pp.y < ctop - 0.8 or beyond):
 				want_jump = true
+		# esquive : saute quand un projectile (canon) arrive tout près
+		if pl.is_on_floor() and jump_hold == 0 and not pending:
+			for c in lv.get_children():
+				if c is Area3D and c.get("velocity") != null and c.velocity.length() > 1.0:
+					var rel: Vector3 = c.global_position - pp
+					if Vector2(rel.x, rel.z).length() < 3.2 and absf(rel.y - 1.0) < 1.6:
+						want_jump = true
 		if move: Input.action_press("forward")
 		else: Input.action_release("forward")
 		if want_jump and not pending:
@@ -125,8 +138,7 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 				Input.action_release("jump"); jump_hold = 0; pending = true
 			else:
 				Input.action_press("jump"); jump_hold = 30
-	print("END state=", lv.state, " pp=", pl.global_position, " panels=", lv.panel_nodes.size())
 	Input.action_release("forward"); Input.action_release("jump")
-	var res = {"win": lv.state == "won", "t": t, "deaths": lv.deaths, "cur": cur, "n": n, "kind": ("n" if cur + 1 >= n else str(plats[mini(cur + 1, n - 1)].kind))}
+	var res = {"win": lv.state == "won" or reached_arena, "t": t, "deaths": lv.deaths, "cur": cur, "n": n, "kind": ("n" if cur + 1 >= n else str(plats[mini(cur + 1, n - 1)].kind))}
 	root.remove_child(lv); lv.free()
 	return res

@@ -17,7 +17,11 @@ func _ready() -> void:
 	if info.is_empty():
 		info = {"title": "", "text": "", "theme": 0, "next": "menu", "button": "Continuer"}
 	var theme: Dictionary = LevelData.get_themes()[clampi(int(info["theme"]), 0, LevelData.WORLD_COUNT - 1)]
-	Global.stop_music()
+	if info.get("jingle", "") != "":
+		Global.stop_music()
+		Global.play_jingle(String(info["jingle"]))
+	else:
+		Global.play_ambient("story")
 
 	var bg := ColorRect.new()
 	bg.color = Color(theme["sky_top"]).darkened(0.3)

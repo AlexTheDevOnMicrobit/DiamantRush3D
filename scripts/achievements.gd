@@ -18,6 +18,10 @@ const DEFS := [
 	["globetrotter", "Globe-trotter", "Termine chacun des 12 mondes au moins une fois."],
 	["coins_200", "Collectionneur", "Ramasse 200 pièces au total."],
 	["dandy", "Dandy", "Débloque 4 apparences pour Lumi."],
+	["boss", "Tombeur d'Ombre", "Bats un boss de fin de monde."],
+	["endless_10", "Infatigable", "Atteins l'étape 10 du mode infini."],
+	["challenge", "Relève le défi", "Réussis un défi du jour ou de la semaine."],
+	["ghost_win", "Plus fort que ton ombre", "Bats ton propre fantôme."],
 ]
 
 
@@ -41,6 +45,8 @@ static func evaluate_stage(g: Node, info: Dictionary) -> Array:
 	_try(g, got, "iron_heart", bool(info["hardcore"]))
 	_try(g, got, "expert", bool(info["expert"]))
 	_try(g, got, "power", bool(info["boost"]) and bool(info["wing"]))
+	_try(g, got, "boss", bool(info.get("boss", false)))
+	_try(g, got, "ghost_win", bool(info.get("beat_ghost", false)))
 	_try(g, got, "coins_200", int(g.stats["coins"]) >= 200)
 	_try(g, got, "dandy", g.unlocked_skins().size() >= 4)
 	var worlds: Array = g.stats["worlds"]

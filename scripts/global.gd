@@ -1,12 +1,16 @@
 extends Node
-## Autoload : run en cours, progression, sauvegarde, options, modificateurs, succès, apparences, audio.
+## Autoload : run en cours, modes, progression, sauvegarde, options, modificateurs,
+## succès, apparences, défis, codes de partage, fantômes, classement, audio.
 
-const VERSION := "3.0.0"
+const VERSION := "3.1.0"
+const REPO := "AlexTheDevOnMicrobit/DiamantRush3D"
 const SAVE_PATH := "user://save.cfg"
+const GHOST_PATH := "user://ghosts.dat"
 const LevelData = preload("res://scripts/level_data.gd")
 const Story = preload("res://scripts/story.gd")
 const Sfx = preload("res://scripts/sfx.gd")
 const Achievements = preload("res://scripts/achievements.gd")
+const Translations = preload("res://scripts/translations.gd")
 
 const GRAVITY_NAMES: Array[String] = ["Lunaire", "Normale", "Lourde"]
 const GRAVITY_SCALES: Array[float] = [0.45, 1.0, 1.5]
@@ -17,6 +21,7 @@ const LENGTH_MULT: Array[float] = [1.0, 1.15, 1.3, 1.6]
 const DIFFICULTY_NAMES: Array[String] = ["Détendu", "Normal", "Expert"]
 const DIFFICULTY_MULT: Array[float] = [0.8, 1.0, 1.3]
 const QUALITY_NAMES: Array[String] = ["Basse", "Moyenne", "Élevée"]
+const ENDLESS_LIVES := 3
 
 ## Modificateurs à cocher : clé, nom, multiplicateur de score
 const TOGGLES := [
@@ -45,21 +50,42 @@ const SKINS := [
 	{"id": "rainbow", "name": "Arc-en-ciel", "color": Color(1, 1, 1), "cost": 600},
 ]
 
+## Touches remappables : action, libellé
+const REMAP_ACTIONS := [
+	["forward", "Avancer"], ["back", "Reculer"], ["left", "Gauche"], ["right", "Droite"],
+	["jump", "Sauter"], ["pause", "Pause"], ["restart", "Recommencer"],
+]
+const DEFAULT_KEYS := {
+	"forward": KEY_W, "back": KEY_S, "left": KEY_A, "right": KEY_D,
+	"jump": KEY_SPACE, "pause": KEY_ESCAPE, "restart": KEY_R,
+}
+
+const MUSIC_FILES := [
+	"world_01_prairies", "world_02_foret", "world_03_dunes", "world_04_recif", "world_05_toundra", "world_06_cristaux",
+	"world_07_usine", "world_08_ruines", "world_09_marais", "world_10_volcan", "world_11_neon", "world_12_ciel",
+]
+
 var run: Dictionary = {}
 var pending_story: Dictionary = {}
 
 var records: Dictionary = {}
 var stats: Dictionary = {}
 var achievements: Dictionary = {}
+var leaderboard: Dictionary = {}
+var challenges_done: Dictionary = {}
 var toasts: Array = [] # succès à annoncer en jeu
 
 var mods: Dictionary = {}
+var mods_backup: Dictionary = {}
 var options: Dictionary = {}
 
 var sounds: Dictionary = {}
 var _sfx_players: Array[AudioStreamPlayer] = []
 var _music_player: AudioStreamPlayer
-var _music_theme := -1
+var _jingle_player: AudioStreamPlayer
+var _music_key := ""
+var _ghosts: Dictionary = {}
+var _ghosts_loaded := false
 
 
 func _ready() -> void:
@@ -71,6 +97,7 @@ func _ready() -> void:
 	_setup_input()
 	_setup_theme()
 	_setup_audio()
+	_setup_translations()
 	load_game()
 	apply_options()
 
@@ -112,16 +139,16 @@ func active_mod_count() -> int:
 func mod_summary() -> String:
 	var parts: Array[String] = []
 	if int(mods["gravity"]) != 1:
-		parts.append("Gravité " + GRAVITY_NAMES[int(mods["gravity"])].to_lower())
+		parts.append(tr("Gravité") + " " + tr(GRAVITY_NAMES[int(mods["gravity"])]).to_lower())
 	if int(mods["length"]) != 0:
-		parts.append("Longueur " + LENGTH_NAMES[int(mods["length"])].split(" (")[0].to_lower())
+		parts.append(tr("Longueur") + " " + tr(LENGTH_NAMES[int(mods["length"])].split(" (")[0]).to_lower())
 	if int(mods["difficulty"]) != 1:
-		parts.append("Difficulté " + DIFFICULTY_NAMES[int(mods["difficulty"])].to_lower())
+		parts.append(tr("Difficulté") + " " + tr(DIFFICULTY_NAMES[int(mods["difficulty"])]).to_lower())
 	for t in TOGGLES:
 		if mods[t[0]]:
-			parts.append(String(t[1]).split(" (")[0])
+			parts.append(tr(String(t[1]).split(" (")[0]))
 	if parts.is_empty():
-		return "Aucun modificateur"
+		return tr("Aucun modificateur")
 	return ", ".join(parts)
 
 
@@ -142,6 +169,12 @@ func reset_mods(save: bool = true) -> void:
 		save_game()
 
 
+func restore_mods() -> void:
+	if not mods_backup.is_empty():
+		mods = mods_backup
+		mods_backup = {}
+
+
 func reset_options() -> void:
 	options = {
 		"master": 0.8, "music": 0.5, "sfx": 0.8,
@@ -150,13 +183,18 @@ func reset_options() -> void:
 		"quality": 0 if is_touch_device() else 2,
 		"touch": 0, "touch_scale": 1.0, "vibration": true,
 		"skin": "orange",
+		"assist": false, "symbols": false, "colorblind": false,
+		"text_scale": 1.0, "ghost": true, "updates": true,
+		"language": "auto", "keymap": {},
 	}
 
 
 func reset_stats() -> void:
 	records = {}
-	stats = {"coins": 0, "jumps": 0, "falls": 0, "stages": 0, "runs": 0, "playtime": 0.0, "worlds": []}
+	stats = {"coins": 0, "jumps": 0, "falls": 0, "stages": 0, "runs": 0, "playtime": 0.0, "worlds": [], "bosses": 0, "endless_best": 0}
 	achievements = {}
+	leaderboard = {"all": [], "endless": []}
+	challenges_done = {}
 
 
 # ---------------------------------------------------------------- plateforme / mobile
@@ -235,6 +273,7 @@ func reset_run(seed_value: int) -> void:
 	run = {
 		"seed": seed_value, "mode": "adventure", "stages": [0], "stage": 0,
 		"time": 0.0, "score": 0, "deaths": 0, "coins": 0, "active": false, "daily": false,
+		"lives": 0, "challenge": "", "objective": {}, "reward": 0, "challenge_kind": "",
 	}
 
 
@@ -254,16 +293,34 @@ func quick_worlds(seed_value: int) -> Array:
 	return out
 
 
+func is_endless() -> bool:
+	return run["mode"] == "endless"
+
+
+## Monde de l'étape courante (le mode infini fait tourner les 12 mondes).
 func current_theme() -> int:
+	if is_endless():
+		return int(run["stage"]) % LevelData.WORLD_COUNT
 	var st: Array = run["stages"]
 	return int(st[clampi(int(run["stage"]), 0, st.size() - 1)])
 
 
 func stage_total() -> int:
+	if is_endless():
+		return 9999
 	return (run["stages"] as Array).size()
 
 
-## mode : "adventure" (12 mondes), "quick" (5 mondes) ou "free" (un monde : worlds[0])
+## Réglages de génération supplémentaires (mode infini : difficulté croissante, étapes plus courtes, pas de boss).
+func generation_extra() -> Dictionary:
+	if is_endless():
+		var st := int(run["stage"])
+		return {"diff_bonus": float(st / LevelData.WORLD_COUNT) * 1.5 + float(st % LevelData.WORLD_COUNT) * 0.0,
+			"allow_boss": false, "count_mult": minf(0.55 + float(st) * 0.02, 0.9)}
+	return {}
+
+
+## mode : "adventure" (12 mondes), "quick" (5 mondes), "free" (un monde : worlds[0]) ou "endless"
 func start_run(seed_value: int, mode: String = "adventure", worlds: Array = [], skip_intro: bool = false, daily: bool = false) -> void:
 	reset_run(seed_value)
 	run["mode"] = mode
@@ -272,8 +329,11 @@ func start_run(seed_value: int, mode: String = "adventure", worlds: Array = [], 
 	match mode:
 		"quick": run["stages"] = quick_worlds(seed_value)
 		"free": run["stages"] = [int(worlds[0]) if not worlds.is_empty() else 0]
+		"endless":
+			run["stages"] = [0]
+			run["lives"] = ENDLESS_LIVES
 		_: run["stages"] = range(LevelData.WORLD_COUNT)
-	if mode == "free":
+	if mode == "free" or mode == "endless":
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/level.tscn")
 	elif skip_intro:
@@ -284,13 +344,21 @@ func start_run(seed_value: int, mode: String = "adventure", worlds: Array = [], 
 		_story(Story.INTRO_TITLE, Story.INTRO, 0, "stage_story", "Commencer l'aventure")
 
 
+## Relance la run en cours avec la même seed (conserve le défi éventuel).
+func restart_run() -> void:
+	var keep := {"challenge": run["challenge"], "objective": run["objective"], "reward": run["reward"], "challenge_kind": run["challenge_kind"]}
+	start_run(int(run["seed"]), String(run["mode"]), run["stages"], true, bool(run["daily"]))
+	for k in keep:
+		run[k] = keep[k]
+
+
 func show_stage_story() -> void:
 	var theme_idx := current_theme()
 	var info: Dictionary = Story.STAGES[theme_idx]
-	var title: String = info["title"]
+	var title: String = tr(info["title"])
 	if run["mode"] == "quick":
-		title = "Étape %d/%d — %s" % [int(run["stage"]) + 1, stage_total(), LevelData.get_themes()[theme_idx]["name"]]
-	_story(title, info["before"], theme_idx, "level", "C'est parti !")
+		title = tr("Étape %d/%d — %s") % [int(run["stage"]) + 1, stage_total(), tr(LevelData.get_themes()[theme_idx]["name"])]
+	_story(title, tr(info["before"]), theme_idx, "level", "C'est parti !")
 
 
 ## info : {time, score, coins, deaths}
@@ -299,7 +367,18 @@ func stage_cleared(info: Dictionary) -> void:
 	run["score"] = int(run["score"]) + int(info["score"])
 	run["coins"] = int(run["coins"]) + int(info["coins"])
 	run["deaths"] = int(run["deaths"]) + int(info["deaths"])
-	if int(run["stage"]) + 1 >= stage_total():
+	if is_endless():
+		run["stage"] = int(run["stage"]) + 1
+		stats["endless_best"] = maxi(int(stats["endless_best"]), int(run["stage"]))
+		if int(run["stage"]) % 3 == 0:
+			run["lives"] = mini(int(run["lives"]) + 1, ENDLESS_LIVES + 2)
+		if int(run["stage"]) >= 10 and not achievements.has("endless_10"):
+			achievements["endless_10"] = true
+			toasts.append("endless_10")
+		save_game()
+		get_tree().paused = false
+		get_tree().change_scene_to_file("res://scenes/level.tscn")
+	elif int(run["stage"]) + 1 >= stage_total():
 		_finish_run()
 	else:
 		run["stage"] = int(run["stage"]) + 1
@@ -312,6 +391,31 @@ func record_key() -> String:
 	return String(run["mode"])
 
 
+## Ajoute un score au classement local (top 10 général, top 10 mode infini).
+func add_score(mode: String, score: int, stages: int, seed_value: int) -> int:
+	var entry := {"score": score, "mode": mode, "stages": stages, "seed": seed_value, "date": Time.get_date_string_from_system()}
+	var rank := -1
+	for list_key in (["all", "endless"] if mode == "endless" else ["all"]):
+		var list: Array = leaderboard[list_key]
+		list.append(entry)
+		list.sort_custom(func(a, b): return int(a["score"]) > int(b["score"]))
+		if list.size() > 10:
+			list.resize(10)
+		if list_key == "all" or mode == "endless":
+			rank = list.find(entry) + 1 if list.has(entry) else -1
+	return rank
+
+
+## Évalue l'objectif d'un défi : {type: falls|coins|time|nofall, value}
+func objective_met(obj: Dictionary) -> bool:
+	match String(obj.get("type", "")):
+		"falls": return int(run["deaths"]) <= int(obj["value"])
+		"nofall": return int(run["deaths"]) == 0
+		"coins": return int(run["coins"]) >= int(obj["value"])
+		"time": return float(run["time"]) <= float(obj["value"])
+	return true
+
+
 func _finish_run() -> void:
 	run["active"] = false
 	var bonus := int(1000 * multiplier()) if run["mode"] != "free" else 0
@@ -322,35 +426,64 @@ func _finish_run() -> void:
 	if not records.has(key) or int(run["score"]) > int((records[key] as Dictionary)["score"]):
 		records[key] = {"score": int(run["score"]), "time": float(run["time"])}
 		new_best = true
+	var rank := add_score(String(run["mode"]), int(run["score"]), stage_total(), int(run["seed"]))
 	var got := Achievements.evaluate_run(self, String(run["mode"]), bool(mods["hardcore"]), bool(run["daily"]))
-	toasts.append_array(got)
+	var challenge_text := ""
+	if String(run["challenge"]) != "":
+		var ok := objective_met(run["objective"])
+		var ckey := String(run["challenge"])
+		if ok and not challenges_done.has(ckey):
+			challenges_done[ckey] = true
+			stats["coins"] = int(stats["coins"]) + int(run["reward"])
+			if not achievements.has("challenge"):
+				achievements["challenge"] = true
+				got.append("challenge")
+			challenge_text = tr("Défi réussi ! +%d pièces") % int(run["reward"])
+		elif ok:
+			challenge_text = tr("Défi déjà réussi.")
+		else:
+			challenge_text = tr("Défi manqué : ") + challenge_objective_text(run["objective"])
 	save_game()
 	var text := ""
-	var title := Story.WORLD_ENDING_TITLE
+	var title := tr(Story.WORLD_ENDING_TITLE)
 	match String(run["mode"]):
 		"adventure":
-			title = Story.ENDING_TITLE
-			text = Story.ENDING + "\n\n"
+			title = tr(Story.ENDING_TITLE)
+			text = tr(Story.ENDING) + "\n\n"
 		"quick":
-			title = Story.QUICK_ENDING_TITLE
-			text = Story.QUICK_ENDING + "\n\n"
+			title = tr(Story.QUICK_ENDING_TITLE)
+			text = tr(Story.QUICK_ENDING) + "\n\n"
 		_:
-			text = "%s terminé !\n\n" % LevelData.get_themes()[int((run["stages"] as Array)[0])]["name"]
-	text += "— Résultat —\nScore : %d%s%s\n" % [int(run["score"]), (" (bonus de fin +%d)" % bonus) if bonus > 0 else "", "  (nouveau record !)" if new_best else ""]
-	text += "Temps : %s   •   Pièces : %d   •   Chutes : %d\n" % [format_time(float(run["time"])), int(run["coins"]), int(run["deaths"])]
-	text += "Seed : %d   •   %s" % [int(run["seed"]), mod_summary()]
+			text = tr("%s terminé !") % tr(LevelData.get_themes()[int((run["stages"] as Array)[0])]["name"]) + "\n\n"
+	text += tr("— Résultat —") + "\n" + tr("Score : %d") % int(run["score"])
+	if bonus > 0:
+		text += " " + (tr("(bonus de fin +%d)") % bonus)
+	if new_best:
+		text += "  " + tr("(nouveau record !)")
+	text += "\n" + tr("Temps : %s   •   Pièces : %d   •   Chutes : %d") % [format_time(float(run["time"])), int(run["coins"]), int(run["deaths"])] + "\n"
+	text += tr("Seed : %d") % int(run["seed"]) + "   •   " + mod_summary()
+	if rank > 0:
+		text += "\n" + tr("Classement local : n°%d") % rank
+	if challenge_text != "":
+		text += "\n" + challenge_text
 	if not got.is_empty():
 		var names: Array[String] = []
 		for id in got:
-			names.append(Achievements.name_of(String(id)))
-		text += "\nSuccès débloqués : " + ", ".join(names)
+			names.append(tr(Achievements.name_of(String(id))))
+		text += "\n" + tr("Succès débloqués : ") + ", ".join(names)
 	toasts.clear()
 	_story(title, text, 11 if run["mode"] == "adventure" else int((run["stages"] as Array).back()), "menu", "Retour au menu")
+	pending_story["jingle"] = "run_complete"
 
 
-func fail_run() -> void:
+## Fin d'une run perdue ou abandonnée : le score cumulé entre quand même au classement.
+func fail_run() -> int:
+	var rank := -1
+	if run["active"] and int(run["score"]) > 0:
+		rank = add_score(String(run["mode"]), int(run["score"]), int(run["stage"]) + (1 if not is_endless() else 0), int(run["seed"]))
 	run["active"] = false
 	save_game()
+	return rank
 
 
 func _story(title: String, text: String, theme_idx: int, next: String, button: String) -> void:
@@ -363,6 +496,169 @@ func format_time(t: float) -> String:
 	return "%02d:%04.1f" % [int(t / 60.0), fmod(t, 60.0)]
 
 
+# ---------------------------------------------------------------- défis du jour / de la semaine
+
+func challenge_objective_text(obj: Dictionary) -> String:
+	match String(obj.get("type", "")):
+		"falls": return tr("au plus %d chutes") % int(obj["value"])
+		"nofall": return tr("aucune chute")
+		"coins": return tr("au moins %d pièces") % int(obj["value"])
+		"time": return tr("en moins de %s") % format_time(float(obj["value"]))
+	return ""
+
+
+## kind : "daily" ou "weekly". Même résultat pour tout le monde le même jour / la même semaine.
+func challenge_def(kind: String) -> Dictionary:
+	var days := int(Time.get_unix_time_from_system() / 86400.0)
+	var cid := days if kind == "daily" else int(days / 7)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([cid, kind, 99])
+	var pool := ["speed", "no_double", "mirror", "ice", "wind", "crumble", "fog", "lava", "timer", "invert"]
+	for i in range(pool.size() - 1, 0, -1):
+		var j := rng.randi() % (i + 1)
+		var tmp = pool[i]
+		pool[i] = pool[j]
+		pool[j] = tmp
+	var n := 2 if kind == "daily" else 3
+	var forced := {"gravity": rng.randi() % 3, "length": 0 if kind == "daily" else 1, "difficulty": 1 if kind == "daily" else 2}
+	for k in n:
+		forced[pool[k]] = true
+	var objectives := [
+		{"type": "falls", "value": 4 if kind == "daily" else 6},
+		{"type": "coins", "value": 8 if kind == "daily" else 10},
+		{"type": "time", "value": 600.0 if kind == "daily" else 900.0},
+		{"type": "falls", "value": 2 if kind == "daily" else 3},
+	]
+	var obj: Dictionary = objectives[rng.randi() % objectives.size()]
+	return {
+		"kind": kind,
+		"key": ("d%d" if kind == "daily" else "w%d") % cid,
+		"seed": daily_seed() if kind == "daily" else (cid * 7919) % 900000 + 100000,
+		"mode": "quick",
+		"mods": forced,
+		"objective": obj,
+		"reward": 30 if kind == "daily" else 100,
+		"done": challenges_done.has(("d%d" if kind == "daily" else "w%d") % cid),
+	}
+
+
+func start_challenge(kind: String) -> void:
+	var c := challenge_def(kind)
+	if mods_backup.is_empty():
+		mods_backup = mods.duplicate(true)
+	reset_mods(false)
+	for k in c["mods"]:
+		mods[k] = c["mods"][k]
+	start_run(int(c["seed"]), String(c["mode"]), [], false, kind == "daily")
+	run["challenge"] = c["key"]
+	run["objective"] = c["objective"]
+	run["reward"] = c["reward"]
+	run["challenge_kind"] = kind
+
+
+func challenge_mod_text(c: Dictionary) -> String:
+	var saved := mods
+	mods = {"gravity": 1, "length": 0, "difficulty": 1}
+	for t in TOGGLES:
+		mods[t[0]] = false
+	for k in c["mods"]:
+		mods[k] = c["mods"][k]
+	var s := mod_summary()
+	mods = saved
+	return s
+
+
+# ---------------------------------------------------------------- codes de partage
+
+## Code court qui décrit une run : mode, seed, modificateurs. Ex. : DR1-Q-482913-101-1A3
+func share_code(mode: String, seed_value: int, worlds: Array = []) -> String:
+	var m := "A"
+	match mode:
+		"quick": m = "Q"
+		"endless": m = "E"
+		"free": m = "F%d" % (int(worlds[0]) if not worlds.is_empty() else 0)
+	var bits := 0
+	for i in TOGGLES.size():
+		if mods[TOGGLES[i][0]]:
+			bits |= (1 << i)
+	return "DR1-%s-%d-%d%d%d-%X" % [m, seed_value, int(mods["gravity"]), int(mods["length"]), int(mods["difficulty"]), bits]
+
+
+## Lit un code de partage, applique ses modificateurs et retourne {mode, seed, worlds}, ou {} s'il est invalide.
+func apply_share_code(code: String) -> Dictionary:
+	var parts := code.strip_edges().to_upper().split("-")
+	if parts.size() != 5 or parts[0] != "DR1":
+		return {}
+	var mode := ""
+	var worlds: Array = []
+	var m: String = parts[1]
+	if m == "A": mode = "adventure"
+	elif m == "Q": mode = "quick"
+	elif m == "E": mode = "endless"
+	elif m.begins_with("F") and m.substr(1).is_valid_int():
+		mode = "free"
+		worlds = [clampi(int(m.substr(1)), 0, LevelData.WORLD_COUNT - 1)]
+	else:
+		return {}
+	if not parts[2].is_valid_int():
+		return {}
+	var dig: String = parts[3]
+	if dig.length() != 3 or not dig.is_valid_int():
+		return {}
+	var g := int(dig[0])
+	var l := int(dig[1])
+	var d := int(dig[2])
+	if g > 2 or l > 3 or d > 2 or not parts[4].is_valid_hex_number():
+		return {}
+	var bits := parts[4].hex_to_int()
+	reset_mods(false)
+	mods["gravity"] = g
+	mods["length"] = l
+	mods["difficulty"] = d
+	for i in TOGGLES.size():
+		mods[TOGGLES[i][0]] = (bits & (1 << i)) != 0
+	save_game()
+	return {"mode": mode, "seed": int(parts[2]), "worlds": worlds}
+
+
+# ---------------------------------------------------------------- fantômes
+
+func ghost_key(seed_value: int, world: int, stage: int) -> String:
+	return "%d_%d_%d_%d_%d_%d" % [seed_value, world, stage, int(mods["length"]), int(mods["difficulty"]), 1 if mods["mirror"] else 0]
+
+
+func _load_ghosts() -> void:
+	if _ghosts_loaded:
+		return
+	_ghosts_loaded = true
+	if FileAccess.file_exists(GHOST_PATH):
+		var f := FileAccess.open(GHOST_PATH, FileAccess.READ)
+		if f:
+			var v = f.get_var()
+			if v is Dictionary:
+				_ghosts = v
+
+
+func get_ghost(key: String) -> Dictionary:
+	_load_ghosts()
+	return _ghosts.get(key, {})
+
+
+## Enregistre le fantôme s'il bat le précédent. Retourne vrai si c'est un nouveau record.
+func save_ghost(key: String, time_s: float, data: PackedFloat32Array) -> bool:
+	_load_ghosts()
+	if _ghosts.has(key) and float((_ghosts[key] as Dictionary)["time"]) <= time_s:
+		return false
+	_ghosts.erase(key)
+	_ghosts[key] = {"time": time_s, "data": data}
+	while _ghosts.size() > 60:
+		_ghosts.erase(_ghosts.keys()[0]) # plus ancien d'abord (ordre d'insertion)
+	var f := FileAccess.open(GHOST_PATH, FileAccess.WRITE)
+	if f:
+		f.store_var(_ghosts)
+	return true
+
+
 # ---------------------------------------------------------------- sauvegarde
 
 func save_game() -> void:
@@ -370,7 +666,9 @@ func save_game() -> void:
 	cfg.set_value("progress", "records", records)
 	cfg.set_value("progress", "stats", stats)
 	cfg.set_value("progress", "achievements", achievements)
-	cfg.set_value("mods", "all", mods)
+	cfg.set_value("progress", "leaderboard", leaderboard)
+	cfg.set_value("progress", "challenges_done", challenges_done)
+	cfg.set_value("mods", "all", mods_backup if not mods_backup.is_empty() else mods)
 	cfg.set_value("options", "all", options)
 	cfg.save(SAVE_PATH)
 
@@ -387,6 +685,11 @@ func load_game() -> void:
 		if stats.has(k):
 			stats[k] = st[k]
 	achievements = cfg.get_value("progress", "achievements", {})
+	var lb: Dictionary = cfg.get_value("progress", "leaderboard", {})
+	for k in lb:
+		if leaderboard.has(k):
+			leaderboard[k] = lb[k]
+	challenges_done = cfg.get_value("progress", "challenges_done", {})
 	var saved: Dictionary = cfg.get_value("mods", "all", {})
 	for k in saved:
 		if mods.has(k):
@@ -403,19 +706,33 @@ func apply_options() -> void:
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(float(options["master"]), 0.0001)))
 	if _music_player:
 		_music_player.volume_db = linear_to_db(maxf(float(options["music"]), 0.0001))
+		_jingle_player.volume_db = linear_to_db(maxf(float(options["music"]), 0.0001))
 	if not is_touch_device():
 		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if options["fullscreen"] else DisplayServer.WINDOW_MODE_WINDOWED
 		DisplayServer.window_set_mode(mode)
+	if get_tree().root.theme:
+		get_tree().root.theme.default_font_size = int(22 * float(options["text_scale"]))
+	apply_language()
+	apply_keymap()
 
 
 func _setup_audio() -> void:
 	sounds = Sfx.build_all()
+	# des fichiers dans audio/sfx/ remplacent les sons synthétisés
+	for n in sounds.keys():
+		for ext in ["ogg", "wav"]:
+			var p := "res://audio/sfx/%s.%s" % [n, ext]
+			if ResourceLoader.exists(p):
+				sounds[n] = load(p)
+				break
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_sfx_players.append(p)
 	_music_player = AudioStreamPlayer.new()
 	add_child(_music_player)
+	_jingle_player = AudioStreamPlayer.new()
+	add_child(_jingle_player)
 
 
 func play_sfx(sfx_name: String, pitch: float = 1.0, db: float = 0.0) -> void:
@@ -430,18 +747,78 @@ func play_sfx(sfx_name: String, pitch: float = 1.0, db: float = 0.0) -> void:
 			return
 
 
-func play_music(theme_idx: int) -> void:
-	if theme_idx == _music_theme and _music_player.playing:
-		return
-	_music_theme = theme_idx
-	_music_player.stream = Sfx.music(theme_idx)
+func _load_music_file(file_name: String) -> AudioStream:
+	for ext in ["ogg", "wav", "mp3"]:
+		var p := "res://audio/music/%s.%s" % [file_name, ext]
+		if ResourceLoader.exists(p):
+			var s: AudioStream = load(p)
+			if s is AudioStreamOggVorbis:
+				(s as AudioStreamOggVorbis).loop = true
+			elif s is AudioStreamMP3:
+				(s as AudioStreamMP3).loop = true
+			elif s is AudioStreamWAV and (s as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED:
+				(s as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+			return s
+	return null
+
+
+func _play_stream(key: String, s: AudioStream) -> void:
+	_music_key = key
+	_music_player.stream = s
 	_music_player.volume_db = linear_to_db(maxf(float(options["music"]), 0.0001))
 	_music_player.play()
 
 
+## Musique d'un monde : fichier audio/music/world_XX_*.ogg s'il existe, sinon musique synthétisée.
+func play_music(theme_idx: int) -> void:
+	var key := "world_%d" % theme_idx
+	if key == _music_key and _music_player.playing:
+		return
+	var s := _load_music_file(MUSIC_FILES[clampi(theme_idx, 0, MUSIC_FILES.size() - 1)])
+	_play_stream(key, s if s else Sfx.music(theme_idx))
+
+
+## Musique du menu ("menu") ou des écrans d'histoire ("story") : seulement si le fichier existe.
+func play_ambient(file_name: String) -> void:
+	if file_name == _music_key and _music_player.playing:
+		return
+	var s := _load_music_file(file_name)
+	if s:
+		_play_stream(file_name, s)
+	else:
+		stop_music()
+
+
+## Jingle de fin ("win", "lose", "run_complete") : fichier audio/music/<nom>.ogg ou son synthétisé.
+func play_jingle(jingle_name: String) -> void:
+	var s := _load_music_file(jingle_name)
+	if s:
+		if s is AudioStreamOggVorbis:
+			(s as AudioStreamOggVorbis).loop = false
+		_jingle_player.stream = s
+		_jingle_player.volume_db = linear_to_db(maxf(float(options["music"]), 0.0001))
+		_jingle_player.play()
+	else:
+		play_sfx(jingle_name)
+
+
 func stop_music() -> void:
-	_music_theme = -1
+	_music_key = ""
 	_music_player.stop()
+
+
+# ---------------------------------------------------------------- langue
+
+func _setup_translations() -> void:
+	for t in Translations.build():
+		TranslationServer.add_translation(t)
+
+
+func apply_language() -> void:
+	var lang := String(options["language"])
+	if lang == "auto":
+		lang = "fr" if OS.get_locale_language() == "fr" else "en"
+	TranslationServer.set_locale(lang)
 
 
 # ---------------------------------------------------------------- entrées / thème
@@ -493,6 +870,42 @@ func _add_button(action: String, button: int) -> void:
 	var e := InputEventJoypadButton.new()
 	e.button_index = button
 	InputMap.action_add_event(action, e)
+
+
+## Remplace la première touche clavier d'une action (les flèches et la manette restent actives).
+func set_key(action: String, physical_keycode: int) -> void:
+	var done := false
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey and not done:
+			InputMap.action_erase_event(action, e)
+			var ne := InputEventKey.new()
+			ne.physical_keycode = physical_keycode
+			InputMap.action_add_event(action, ne)
+			done = true
+	(options["keymap"] as Dictionary)[action] = physical_keycode
+
+
+func key_name(action: String) -> String:
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			var pk: int = (e as InputEventKey).physical_keycode
+			var kc := DisplayServer.keyboard_get_keycode_from_physical(pk)
+			return OS.get_keycode_string(kc if kc != KEY_NONE else pk)
+	return "—"
+
+
+func apply_keymap() -> void:
+	var km: Dictionary = options["keymap"]
+	for action in km:
+		if InputMap.has_action(String(action)):
+			set_key(String(action), int(km[action]))
+
+
+func reset_keymap() -> void:
+	options["keymap"] = {}
+	for action in DEFAULT_KEYS:
+		set_key(String(action), int(DEFAULT_KEYS[action]))
+	options["keymap"] = {}
 
 
 func _setup_theme() -> void:

@@ -34,6 +34,16 @@ var body_mat: StandardMaterial3D
 var look_speed := 2.6
 var jump_vel := JUMP_VEL
 var jumping := false # vrai tant que la montée vient d'un saut (coupable en relâchant Espace)
+var coyote_time := 0.12
+var buffer_time := 0.12
+var hit_cd := 0.0     # invulnérabilité après un coup
+var launch_t := 0.0   # après un lanceur : le contrôle aérien est réduit
+var flash_t := 0.0
+var shadow: MeshInstance3D
+var shadow_mat: StandardMaterial3D
+var want_cam_dist := 7.0
+
+signal got_hit(from_dir: Vector3)
 
 var pivot: Node3D
 var cam: Camera3D
@@ -57,6 +67,9 @@ func _ready() -> void:
 	air_jumps_max = 0 if Global.mods["no_double"] else 1
 	mouse_sens = 0.004 * float(Global.options["sens"])
 	invert_y = -1.0 if Global.options["invert_y"] else 1.0
+	if Global.options["assist"]:
+		coyote_time = 0.25
+		buffer_time = 0.25
 
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
@@ -79,6 +92,23 @@ func _ready() -> void:
 	cam.position = Vector3(0, 0, cam_dist)
 	pivot.add_child(cam)
 	cam.current = true
+
+	# disque d'ombre sous Lumi : montre où il va atterrir
+	shadow = MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 0.5
+	disc.bottom_radius = 0.5
+	disc.height = 0.02
+	disc.radial_segments = 16
+	shadow.mesh = disc
+	shadow_mat = StandardMaterial3D.new()
+	shadow_mat.albedo_color = Color(0, 0, 0, 0.45)
+	shadow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shadow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	shadow.material_override = shadow_mat
+	shadow.top_level = true
+	shadow.visible = false
+	add_child(shadow)
 
 
 func _part(mesh: Mesh, color: Color, parent: Node3D, pos: Vector3, emission: float = 0.0) -> MeshInstance3D:
@@ -168,6 +198,9 @@ func _physics_process(delta: float) -> void:
 
 	boost_t = maxf(boost_t - delta, 0.0)
 	wing_t = maxf(wing_t - delta, 0.0)
+	hit_cd = maxf(hit_cd - delta, 0.0)
+	launch_t = maxf(launch_t - delta, 0.0)
+	flash_t = maxf(flash_t - delta, 0.0)
 	var look_v := Input.get_vector("look_left", "look_right", "look_up", "look_down")
 	if look_v.length() > 0.0 and controls_enabled:
 		var s := float(Global.options["sens"]) * look_speed * delta
@@ -185,13 +218,15 @@ func _physics_process(delta: float) -> void:
 	var accel := 60.0 if on_floor else 32.0
 	if Global.mods["ice"] or world_ice:
 		accel = 5.0 if on_floor else 20.0
+	if launch_t > 0.0 and not on_floor:
+		accel = 2.0
 	var cur_speed := speed * (1.4 if boost_t > 0.0 else 1.0)
 	var target := dir * cur_speed + wind_vec * (0.3 if on_floor else 1.0)
 	velocity.x = move_toward(velocity.x, target.x, accel * delta)
 	velocity.z = move_toward(velocity.z, target.z, accel * delta)
 
 	if on_floor:
-		coyote = 0.12
+		coyote = coyote_time
 		air_jumps = air_jumps_max + (1 if wing_t > 0.0 else 0)
 	else:
 		coyote -= delta
@@ -199,7 +234,7 @@ func _physics_process(delta: float) -> void:
 
 	buffer -= delta
 	if controls_enabled and Input.is_action_just_pressed("jump"):
-		buffer = 0.12
+		buffer = buffer_time
 	if buffer > 0.0:
 		if coyote > 0.0:
 			_jump(false)
@@ -225,6 +260,33 @@ func _physics_process(delta: float) -> void:
 		var tgt := atan2(-dir.x, -dir.z)
 		model.rotation.y = lerp_angle(model.rotation.y, tgt, 1.0 - exp(-15.0 * delta))
 
+	_update_shadow_and_camera()
+
+
+## Ombre au sol et caméra qui ne traverse pas les dalles.
+func _update_shadow_and_camera() -> void:
+	var space := get_world_3d().direct_space_state
+	var from := global_position + Vector3(0, 0.5, 0)
+	var q := PhysicsRayQueryParameters3D.create(from, from + Vector3(0, -40, 0), 1)
+	var hit := space.intersect_ray(q)
+	if hit.is_empty():
+		shadow.visible = false
+	else:
+		var h: float = from.y - float(hit["position"].y)
+		shadow.visible = true
+		shadow.global_position = hit["position"] + Vector3(0, 0.03, 0)
+		var s := clampf(1.0 - h * 0.04, 0.35, 1.0)
+		shadow.scale = Vector3(s, 1.0, s)
+		shadow_mat.albedo_color.a = clampf(0.5 - h * 0.012, 0.12, 0.5)
+	# caméra : raccourcit la distance si une dalle est entre Lumi et la caméra
+	var origin := pivot.global_position
+	var desired := pivot.global_transform.basis * Vector3(0, 0, cam_dist)
+	var cq := PhysicsRayQueryParameters3D.create(origin, origin + desired, 1)
+	var ch := space.intersect_ray(cq)
+	want_cam_dist = cam_dist
+	if not ch.is_empty():
+		want_cam_dist = maxf(1.2, origin.distance_to(ch["position"]) - 0.4)
+
 
 func _jump(double: bool) -> void:
 	velocity.y = jump_vel
@@ -241,6 +303,12 @@ func _process(delta: float) -> void:
 	var tgt := global_position + Vector3(0, 1.3, 0)
 	pivot.global_position = pivot.global_position.lerp(tgt, 1.0 - exp(-14.0 * delta))
 	pivot.rotation = Vector3(-pitch, yaw, 0)
+	cam.position.z = lerpf(cam.position.z, want_cam_dist, 1.0 - exp(-(18.0 if want_cam_dist < cam.position.z else 4.0) * delta))
+
+	if flash_t > 0.0:
+		model.visible = int(flash_t * 16.0) % 2 == 0
+	else:
+		model.visible = true
 
 	if rainbow and body_mat:
 		body_mat.albedo_color = Color.from_hsv(fposmod(Time.get_ticks_msec() / 2500.0, 1.0), 0.7, 1.0)
@@ -290,3 +358,34 @@ func add_effect(kind: String) -> void:
 		"wing":
 			wing_t = 12.0
 			air_jumps = air_jumps_max + 1
+
+
+## Coup reçu (projectile, boss) : projette Lumi à l'opposé de la source. Retourne faux si invulnérable.
+func get_hit(from_pos: Vector3, power: float = 9.0) -> bool:
+	if hit_cd > 0.0:
+		return false
+	hit_cd = 1.2
+	flash_t = 1.2
+	var away := global_position - from_pos
+	away.y = 0.0
+	away = away.normalized() if away.length() > 0.01 else Vector3.BACK
+	velocity = away * power + Vector3(0, 6.0, 0)
+	coyote = 0.0
+	Global.play_sfx("hit")
+	Global.vibrate(60)
+	Fx.burst(get_parent(), global_position + Vector3(0, 1, 0), Color(1.0, 0.3, 0.2), 14, 4.0, false)
+	got_hit.emit(from_pos)
+	return true
+
+
+## Lance Lumi (tremplin directionnel).
+func launch(vel: Vector3) -> void:
+	velocity = vel
+	launch_t = 0.8 / sqrt(Global.gravity_scale())
+	jumping = false
+	air_jumps = air_jumps_max
+	coyote = 0.0
+	model.scale = Vector3(0.8, 1.3, 0.8)
+	Global.play_sfx("launch")
+	Global.vibrate(30)
+	Fx.burst(get_parent(), global_position, Color(1.0, 0.9, 0.3), 14, 4.0)

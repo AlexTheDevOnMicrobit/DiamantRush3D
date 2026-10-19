@@ -1,5 +1,33 @@
 # Changelog
 
+## 3.1.0
+
+### Nouveau
+- **Boss de fin de monde** (mondes 3, 6, 9 et 12) : l'Ombre et son arène (balayages de boules, météores signalés, tirs ciblés), 3 vies, le diamant n'apparaît qu'après sa défaite.
+- **6 nouveaux types de dalles** (16 au total) : canon, lanceur directionnel, interrupteur + pont, portail d'entrée + sortie.
+- **Mode infini** : étapes courtes qui s'enchaînent, difficulté croissante, 3 vies (+1 toutes les 3 étapes), classement local.
+- **Défis du jour et de la semaine** : seed et modificateurs imposés, objectif, récompense en pièces.
+- **Codes de partage** (`DR1-…`) : mode, seed et modificateurs en une chaîne à copier / coller.
+- **Fantôme** du meilleur temps d'une étape (même seed, même monde, mêmes réglages de longueur, difficulté et miroir).
+- **Classement local** (top 10 général et top 10 infini), nouvelles statistiques (boss, meilleure série infinie), 4 nouveaux succès (20 au total).
+- **Version anglaise** complète (menus, HUD, histoire, succès) avec choix de la langue dans les options.
+- **Accessibilité** : mode daltonien (palette Okabe-Ito + symboles), symboles sur les dalles, aide au saut, taille du texte, touches du clavier réassignables.
+- **Caméra qui ne traverse plus les dalles** et **disque d'ombre** sous Lumi pour juger les atterrissages.
+- **Mises à jour** : vérification (désactivable) de la dernière Release GitHub avec bouton de téléchargement dans le menu.
+- **Chargeur audio** : les fichiers déposés dans `audio/music/` et `audio/sfx/` remplacent automatiquement les sons synthétisés ; 8 nouveaux sons synthétisés (bonus, succès, coup, portail, lanceur, canon, jingle de fin de run).
+- Outils et documentation : `tools/screenshots.gd`, `docs/STORE_PAGE.md` (textes de boutique FR/EN, politique de confidentialité), `docs/MACOS_SIGNING.md`, `audio/README.md`.
+
+### Corrigé / ajusté
+- Les symboles non latins (étoiles, coches) ont été remplacés par du texte simple pour s'afficher aussi sur Web et Android.
+- Un lanceur garde son élan en l'air (le contrôle aérien est réduit après le lancement) et sa portée est identique quelle que soit la gravité.
+- Le générateur n'interrompt jamais une paire portail/sortie ou interrupteur/pont.
+- Le réglage de repli de langue est fixé sur le français pour que le texte source ne soit pas traduit par erreur.
+- Le robot de test esquive les tirs, utilise les portails et les interrupteurs, et compte l'arrivée dans l'arène comme une réussite (environ 95 % de parcours réussis, tous mondes confondus ; les échecs restants viennent surtout de ses limites : glace, canons).
+
+### Vérifié
+- `tests/smoke.gd` : 172 vérifications (générateur, 12 mondes avec tous les modificateurs, chaque piège, boss, mode infini, défis, codes, fantôme, runs, succès, sauvegarde, touches, mises à jour, traductions, 11 pages de menu en français et en anglais, tactile, manette, accessibilité, caméra).
+- Exports Windows, Linux, Web, macOS et Android construits en ligne de commande.
+
 ## 3.0.0
 
 ### Nouveau
