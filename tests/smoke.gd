@@ -47,6 +47,7 @@ func _initialize() -> void:
 	await _test_menus()
 	await _test_touch()
 	await _test_accessibility()
+	await _test_backup()
 
 	g.reset_mods(false)
 	g.reset_stats()
@@ -588,6 +589,41 @@ func _test_misc() -> void:
 	lab.free()
 
 
+# ---------------------------------------------------------------- 3.3 : sauvegarde
+
+func _test_backup() -> void:
+	print("== Sauvegarde 3.3")
+	g.reset_stats()
+	g.stats["coins"] = 77
+	g.world_stars = {"0": 3}
+	g.options["lefty"] = true
+	var code: String = g.export_save_code()
+	check(code.begins_with("DR3-"), "code de sauvegarde généré")
+	g.reset_stats()
+	g.options["lefty"] = false
+	check(int(g.stats["coins"]) == 0, "progression effacée avant restauration")
+	check(g.import_save_code(code), "code de sauvegarde accepté")
+	check(int(g.stats["coins"]) == 77 and g.world_stars.has("0") and g.options["lefty"] == true, "progression et options restaurées")
+	check(not g.import_save_code("n'importe quoi"), "code invalide refusé")
+	check(not g.import_save_code("DR3-AAAA-12"), "code corrompu refusé")
+	check(int(g.stats["coins"]) == 77, "un code refusé ne change rien")
+	g.options["lefty"] = false
+	g.save_game()
+	g.save_game()
+	g._backup_done = false
+	g.load_game()
+	check(FileAccess.file_exists(g.BACKUP_PATH), "copie de secours créée au chargement")
+	check(g.options.has("calm") and g.options.has("danger"), "options 3.3 présentes")
+	var tc = load("res://scripts/touch_controls.gd").new()
+	g.options["lefty"] = true
+	root.add_child(tc)
+	await process_frame
+	check(tc._jump_center().x < tc._ctl.size.x * 0.5 and tc._idle_joy_center().x > tc._ctl.size.x * 0.5, "commandes tactiles inversées pour gaucher")
+	tc.queue_free()
+	g.options["lefty"] = false
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(g.BACKUP_PATH))
+
+
 # ---------------------------------------------------------------- menus
 
 func _test_menus() -> void:
@@ -598,10 +634,10 @@ func _test_menus() -> void:
 	for lang in ["fr", "en", "es", "de", "it", "pt"]:
 		g.options["language"] = lang
 		g.apply_language()
-		for p in ["main", "run", "worlds", "challenges", "mods", "options", "access", "stats", "skins", "story", "help"]:
+		for p in ["main", "run", "worlds", "challenges", "mods", "options", "access", "backup", "stats", "skins", "story", "help"]:
 			menu._show(p)
 			await process_frame
-	check(true, "11 pages du menu construites dans les 6 langues")
+	check(true, "12 pages du menu construites dans les 6 langues")
 	g.options["language"] = "fr"
 	g.apply_language()
 	menu._show("run")

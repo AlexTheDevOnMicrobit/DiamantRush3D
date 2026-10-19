@@ -14,6 +14,7 @@ const Models = preload("res://scripts/models.gd")
 const TouchControls = preload("res://scripts/touch_controls.gd")
 const Achievements = preload("res://scripts/achievements.gd")
 const Boss = preload("res://scripts/boss.gd")
+const DangerArrows = preload("res://scripts/danger_arrows.gd")
 const Ghost = preload("res://scripts/ghost.gd")
 const Tips = preload("res://scripts/tips.gd")
 
@@ -264,6 +265,11 @@ func _build_course() -> void:
 		boss.setup(player, arena_top, arena_half, float(data["difficulty"]), int(data["boss_variant"]), world)
 		boss.defeated.connect(_on_boss_defeated)
 		boss.progress.connect(_on_boss_progress)
+		if Global.options["danger"]:
+			var arrows := DangerArrows.new()
+			arrows.boss = boss
+			arrows.player = player
+			add_child(arrows)
 
 	if Global.mods["lava"]:
 		lava_mesh = MeshInstance3D.new()

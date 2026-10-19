@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.3.0
+
+Mise à jour « confort et finition ».
+
+### Nouveau
+- **Flèches de danger** pendant les combats de boss : une flèche rouge au bord de l'écran pointe vers chaque tir hors champ (option désactivable).
+- **Commandes tactiles pour gaucher** : joystick à droite, saut et pause à gauche.
+- **Effets réduits** : supprime le clignotement de Lumi après un coup.
+- **Code de sauvegarde** : copier / restaurer toute la progression et les options (écran Options → Sauvegarde), avec validation stricte du code.
+- **Copie de secours automatique** (`save.bak`) à chaque lancement, utilisée si la sauvegarde principale est illisible.
+- Les 10 nouveaux textes sont traduits dans les 5 langues ; 12 pages de menu au total.
+
+### Vérifié
+- `tests/smoke.gd` : nouvelles vérifications (aller-retour du code de sauvegarde, codes invalides, copie de secours, options, commandes gaucher).
+- Non vérifié à la main : l'aspect des flèches de danger et le mode gaucher sur un vrai téléphone (voir `docs/ROADMAP.md`).
+
 ## 3.2.0
 
 ### Nouveau

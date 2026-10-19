@@ -322,7 +322,7 @@ func _process(delta: float) -> void:
 	pivot.rotation = Vector3(-pitch, yaw, 0)
 	cam.position.z = lerpf(cam.position.z, want_cam_dist, 1.0 - exp(-(18.0 if want_cam_dist < cam.position.z else 4.0) * delta))
 
-	if flash_t > 0.0:
+	if flash_t > 0.0 and not Global.options["calm"]:
 		model.visible = int(flash_t * 16.0) % 2 == 0
 	else:
 		model.visible = true

@@ -4,7 +4,7 @@ Platformeur 3D low-poly réalisé avec **Godot 4.3**. Tu incarnes **Lumi**, un p
 
 Tout est généré par code : **aucun asset externe** (modèles, textures, sons, musiques, particules). Tu peux déposer tes propres musiques et sons dans `audio/` (voir [audio/README.md](audio/README.md)).
 
-- Version : **3.2.0** (voir [CHANGELOG.md](CHANGELOG.md))
+- Version : **3.3.0** (voir [CHANGELOG.md](CHANGELOG.md))
 - Plateformes : Windows, Linux, macOS, Web, **Android** (et iOS avec un Mac)
 - Contrôles : clavier / souris, manette, écran tactile
 - Langues : **6** — français, English, español, Deutsch, italiano, português (Brésil)
@@ -231,8 +231,15 @@ Un ami le colle dans *Utiliser* pour jouer exactement la même run, avec les mê
 - **Mode daltonien** : palette Okabe-Ito pour les dalles spéciales et symboles sur chaque dalle.
 - **Symboles sur les dalles spéciales** (sans changer les couleurs).
 - **Aide au saut** : temps de grâce doublé pour sauter après avoir quitté un bord ou avant de toucher le sol.
+- **Effets réduits** : plus de clignotement de Lumi après un coup.
+- **Flèches de danger** : pendant un combat de boss, une flèche rouge au bord de l'écran indique chaque tir hors champ (désactivable).
+- **Commandes tactiles pour gaucher** : joystick à droite, saut et pause à gauche.
 - **Taille du texte** : 80 % à 160 %.
 - **Touches du clavier réassignables** (les flèches et la manette restent actives), avec un bouton de remise à zéro.
+
+---
+
+**Sauvegarde** (Options → *Sauvegarde : copier / restaurer*) : le jeu garde une **copie de secours** (`save.bak`) à chaque lancement et la relit si `save.cfg` est illisible. Le même écran affiche un **code de sauvegarde** (commence par `DR3-`) à copier pour transférer ta progression et tes options vers un autre appareil, puis à coller et restaurer ; un code invalide ne change rien.
 
 ---
 
@@ -343,7 +350,7 @@ Tout se lance en ligne de commande, **sans fenêtre** (`--headless`). Remplace `
 
 ### Test de fumée
 
-Vérifie le générateur (15 mondes × 4 longueurs × 3 difficultés), la construction des 15 mondes avec **tous** les modificateurs, le contenu 3.2 (bumper, glace, mondes secrets, étoiles, chapeaux, traînées, Nuit noire / Sans checkpoint / Lumi miniature, astuces, rayon du boss, série de défis, égalisation audio), le comportement de chaque nouveau piège (lanceur, portail, interrupteur/pont, canon, tapis, clignotante, orbitale, ascenseur), le boss (réveil, tirs, coups, défaite, diamant), le mode infini et le classement, les défis et codes de partage, le fantôme, les runs, succès, apparences, sauvegarde, remappage des touches, versions et traductions, les 11 pages de menu dans les 6 langues (et la complétude de chaque traduction), les commandes tactiles, la manette, l'accessibilité, l'ombre et la caméra anti-traversée.
+Vérifie le générateur (15 mondes × 4 longueurs × 3 difficultés), la construction des 15 mondes avec **tous** les modificateurs, la sauvegarde 3.3 (code, copie de secours, gaucher), le contenu 3.2 (bumper, glace, mondes secrets, étoiles, chapeaux, traînées, Nuit noire / Sans checkpoint / Lumi miniature, astuces, rayon du boss, série de défis, égalisation audio), le comportement de chaque nouveau piège (lanceur, portail, interrupteur/pont, canon, tapis, clignotante, orbitale, ascenseur), le boss (réveil, tirs, coups, défaite, diamant), le mode infini et le classement, les défis et codes de partage, le fantôme, les runs, succès, apparences, sauvegarde, remappage des touches, versions et traductions, les 12 pages de menu dans les 6 langues (et la complétude de chaque traduction), les commandes tactiles, la manette, l'accessibilité, l'ombre et la caméra anti-traversée.
 
 ```bash
 godot --headless --path . --script tests/smoke.gd
@@ -382,7 +389,7 @@ GODOT=/chemin/godot tools/build_all.sh windows linux web macos          # Linux 
 .\tools\build_all.ps1 -Godot "C:\chemin\Godot_v4.3-stable_win64_console.exe"   # Windows
 ```
 
-Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-3.2.0-windows.zip`, `-linux`, `-web`, `-macos`, `-android.apk`).
+Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-3.3.0-windows.zip`, `-linux`, `-web`, `-macos`, `-android.apk`).
 
 | Cible | Résultat | Remarque |
 |---|---|---|
@@ -397,7 +404,7 @@ Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-
 Le workflow [.github/workflows/build.yml](.github/workflows/build.yml) lance les tests puis construit toutes les versions et les joint à une **Release** quand tu pousses un tag :
 
 ```bash
-git tag v3.2.0 && git push origin v3.2.0
+git tag v3.3.0 && git push origin v3.3.0
 ```
 
 ### Page de boutique

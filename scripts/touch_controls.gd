@@ -1,5 +1,5 @@
 extends CanvasLayer
-## Commandes tactiles : joystick flottant (gauche), bouton de saut (droite), glisser pour la caméra, bouton pause.
+## Commandes tactiles : joystick flottant (gauche), bouton de saut (droite), inversés en mode gaucher, glisser pour la caméra, bouton pause.
 
 signal pause_pressed
 
@@ -8,6 +8,7 @@ var active := true
 
 var _ctl: Control
 var _scale := 1.0
+var _lefty := false
 var _joy_idx := -1
 var _joy_origin := Vector2.ZERO
 var _joy_pos := Vector2.ZERO
@@ -22,6 +23,7 @@ const DEADZONE := 0.18
 func _ready() -> void:
 	layer = 5
 	_scale = float(Global.options["touch_scale"])
+	_lefty = bool(Global.options["lefty"])
 	_margins = Global.safe_margins()
 	_ctl = Control.new()
 	_ctl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -39,6 +41,8 @@ func set_active(on: bool) -> void:
 
 func _jump_center() -> Vector2:
 	var s := _ctl.size
+	if _lefty:
+		return Vector2(140.0 * _scale + _margins["left"], s.y - (130.0 * _scale + _margins["bottom"]))
 	return Vector2(s.x - (140.0 * _scale + _margins["right"]), s.y - (130.0 * _scale + _margins["bottom"]))
 
 
@@ -47,10 +51,14 @@ func _jump_radius() -> float:
 
 
 func _pause_center() -> Vector2:
+	if _lefty:
+		return Vector2(60.0 + _margins["left"], 60.0 + _margins["top"])
 	return Vector2(_ctl.size.x - (60.0 + _margins["right"]), 60.0 + _margins["top"])
 
 
 func _idle_joy_center() -> Vector2:
+	if _lefty:
+		return Vector2(_ctl.size.x - (170.0 * _scale + _margins["right"]), _ctl.size.y - (150.0 * _scale + _margins["bottom"]))
 	return Vector2(170.0 * _scale + _margins["left"], _ctl.size.y - (150.0 * _scale + _margins["bottom"]))
 
 
@@ -104,7 +112,8 @@ func _touch_down(idx: int, pos: Vector2) -> void:
 		Input.action_press("jump")
 		_ctl.queue_redraw()
 		return
-	if pos.x < _ctl.size.x * 0.45 and _joy_idx == -1:
+	var on_joy_side := pos.x > _ctl.size.x * 0.55 if _lefty else pos.x < _ctl.size.x * 0.45
+	if on_joy_side and _joy_idx == -1:
 		_joy_idx = idx
 		_joy_origin = pos
 		_joy_pos = pos

@@ -2,9 +2,10 @@ extends Node
 ## Autoload : run en cours, modes, progression, sauvegarde, options, modificateurs,
 ## succès, apparences, défis, codes de partage, fantômes, classement, audio.
 
-const VERSION := "3.2.0"
+const VERSION := "3.3.0"
 const REPO := "AlexTheDevOnMicrobit/DiamantRush3D"
 const SAVE_PATH := "user://save.cfg"
+const BACKUP_PATH := "user://save.bak"
 const GHOST_PATH := "user://ghosts.dat"
 const LevelData = preload("res://scripts/level_data.gd")
 const Story = preload("res://scripts/story.gd")
@@ -112,6 +113,7 @@ var _jingle_player: AudioStreamPlayer
 var _music_key := ""
 var _ghosts: Dictionary = {}
 var _ghosts_loaded := false
+var _backup_done := false
 
 
 func _ready() -> void:
@@ -212,6 +214,7 @@ func reset_options() -> void:
 		"assist": false, "symbols": false, "colorblind": false,
 		"text_scale": 1.0, "ghost": true, "updates": true,
 		"language": "auto", "keymap": {}, "hat": "none", "trail": "none", "tips": true,
+		"lefty": false, "calm": false, "danger": true,
 	}
 
 
@@ -763,10 +766,63 @@ func save_game() -> void:
 	cfg.save(SAVE_PATH)
 
 
+## Code de sauvegarde (texte à copier) : toute la progression et les options, compressées en base64.
+func export_save_code() -> String:
+	var d := {
+		"v": 1, "records": records, "stats": stats, "achievements": achievements, "leaderboard": leaderboard,
+		"challenges_done": challenges_done, "world_stars": world_stars, "seen_tips": seen_tips, "options": options,
+	}
+	var raw := var_to_bytes(d)
+	return "DR3-" + Marshalls.raw_to_base64(raw.compress(FileAccess.COMPRESSION_DEFLATE)) + "-" + str(raw.size())
+
+
+## Restaure une sauvegarde depuis un code ; renvoie false (sans rien changer) si le code est invalide.
+func import_save_code(code: String) -> bool:
+	var parts := code.strip_edges().split("-")
+	if parts.size() != 3 or parts[0] != "DR3" or not parts[2].is_valid_int():
+		return false
+	var size := int(parts[2])
+	if size <= 0 or size > 4000000:
+		return false
+	var packed := Marshalls.base64_to_raw(parts[1])
+	if packed.is_empty():
+		return false
+	var raw := packed.decompress(size, FileAccess.COMPRESSION_DEFLATE)
+	if raw.size() != size:
+		return false
+	var d = bytes_to_var(raw) # sans objets : un code collé ne doit pas pouvoir exécuter de code
+	if typeof(d) != TYPE_DICTIONARY or int(d.get("v", 0)) != 1:
+		return false
+	for k in ["records", "stats", "achievements", "leaderboard", "challenges_done", "world_stars", "seen_tips", "options"]:
+		if typeof(d.get(k)) != TYPE_DICTIONARY:
+			return false
+	records = d["records"]
+	for k in d["stats"]:
+		if stats.has(k):
+			stats[k] = d["stats"][k]
+	achievements = d["achievements"]
+	for k in d["leaderboard"]:
+		if leaderboard.has(k):
+			leaderboard[k] = d["leaderboard"][k]
+	challenges_done = d["challenges_done"]
+	world_stars = d["world_stars"]
+	seen_tips = d["seen_tips"]
+	for k in d["options"]:
+		if options.has(k):
+			options[k] = d["options"][k]
+	save_game()
+	apply_options()
+	return true
+
+
 func load_game() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) != OK:
-		return
+		if cfg.load(BACKUP_PATH) != OK:
+			return # première partie, ou sauvegarde illisible sans copie de secours
+	elif not _backup_done:
+		_backup_done = true
+		DirAccess.copy_absolute(SAVE_PATH, BACKUP_PATH) # copie de secours à chaque lancement
 	var rec: Dictionary = cfg.get_value("progress", "records", {})
 	for k in rec:
 		records[k] = rec[k]

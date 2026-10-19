@@ -4,6 +4,16 @@ extends RefCounted
 ## Les textes absents d'une langue restent en français.
 
 const EN := {
+	"Effets réduits (pas de clignotement)": "Reduced effects (no blinking)",
+	"Flèches de danger pour les tirs du boss hors écran": "Danger arrows for off-screen boss shots",
+	"Commandes tactiles pour gaucher (inversées)": "Left-handed touch controls (mirrored)",
+	"Sauvegarde : copier / restaurer": "Save: copy / restore",
+	"Copie ce code pour garder ta progression ; colle-le ici (ou sur un autre appareil) puis choisis Restaurer.": "Copy this code to keep your progress; paste it here (or on another device) then choose Restore.",
+	"Code copié.": "Code copied.",
+	"Sauvegarde restaurée.": "Save restored.",
+	"Code invalide : rien n'a été modifié.": "Invalid code: nothing was changed.",
+	"Copier le code": "Copy the code",
+	"Restaurer depuis le code": "Restore from code",
 	"Premier éclat": "First Shard",
 	"Termine une étape.": "Complete a stage.",
 	"Sans une chute": "Not a Single Fall",
@@ -406,6 +416,16 @@ const EN := {
 }
 
 const ES := {
+	"Effets réduits (pas de clignotement)": "Efectos reducidos (sin parpadeo)",
+	"Flèches de danger pour les tirs du boss hors écran": "Flechas de peligro para los disparos del jefe fuera de pantalla",
+	"Commandes tactiles pour gaucher (inversées)": "Controles táctiles para zurdos (invertidos)",
+	"Sauvegarde : copier / restaurer": "Guardado: copiar / restaurar",
+	"Copie ce code pour garder ta progression ; colle-le ici (ou sur un autre appareil) puis choisis Restaurer.": "Copia este código para conservar tu progreso; pégalo aquí (o en otro dispositivo) y elige Restaurar.",
+	"Code copié.": "Código copiado.",
+	"Sauvegarde restaurée.": "Partida restaurada.",
+	"Code invalide : rien n'a été modifié.": "Código no válido: no se ha cambiado nada.",
+	"Copier le code": "Copiar el código",
+	"Restaurer depuis le code": "Restaurar desde el código",
 	"Premier éclat": "Primer fragmento",
 	"Termine une étape.": "Completa un nivel.",
 	"Sans une chute": "Sin una caída",
@@ -808,6 +828,16 @@ const ES := {
 }
 
 const DE := {
+	"Effets réduits (pas de clignotement)": "Reduzierte Effekte (kein Blinken)",
+	"Flèches de danger pour les tirs du boss hors écran": "Gefahrenpfeile für Boss-Schüsse außerhalb des Bildschirms",
+	"Commandes tactiles pour gaucher (inversées)": "Touch-Steuerung für Linkshänder (gespiegelt)",
+	"Sauvegarde : copier / restaurer": "Speicherstand: kopieren / wiederherstellen",
+	"Copie ce code pour garder ta progression ; colle-le ici (ou sur un autre appareil) puis choisis Restaurer.": "Kopiere diesen Code, um deinen Fortschritt zu sichern; füge ihn hier (oder auf einem anderen Gerät) ein und wähle Wiederherstellen.",
+	"Code copié.": "Code kopiert.",
+	"Sauvegarde restaurée.": "Speicherstand wiederhergestellt.",
+	"Code invalide : rien n'a été modifié.": "Ungültiger Code: nichts wurde geändert.",
+	"Copier le code": "Code kopieren",
+	"Restaurer depuis le code": "Aus Code wiederherstellen",
 	"Premier éclat": "Erster Splitter",
 	"Termine une étape.": "Schließe eine Etappe ab.",
 	"Sans une chute": "Kein einziger Sturz",
@@ -1210,6 +1240,16 @@ const DE := {
 }
 
 const IT := {
+	"Effets réduits (pas de clignotement)": "Effetti ridotti (niente lampeggi)",
+	"Flèches de danger pour les tirs du boss hors écran": "Frecce di pericolo per i colpi del boss fuori schermo",
+	"Commandes tactiles pour gaucher (inversées)": "Comandi touch per mancini (invertiti)",
+	"Sauvegarde : copier / restaurer": "Salvataggio: copia / ripristina",
+	"Copie ce code pour garder ta progression ; colle-le ici (ou sur un autre appareil) puis choisis Restaurer.": "Copia questo codice per conservare i tuoi progressi; incollalo qui (o su un altro dispositivo) e scegli Ripristina.",
+	"Code copié.": "Codice copiato.",
+	"Sauvegarde restaurée.": "Salvataggio ripristinato.",
+	"Code invalide : rien n'a été modifié.": "Codice non valido: nulla è stato modificato.",
+	"Copier le code": "Copia il codice",
+	"Restaurer depuis le code": "Ripristina dal codice",
 	"Premier éclat": "Primo frammento",
 	"Termine une étape.": "Completa un livello.",
 	"Sans une chute": "Nemmeno una caduta",
@@ -1612,6 +1652,16 @@ const IT := {
 }
 
 const PT := {
+	"Effets réduits (pas de clignotement)": "Efeitos reduzidos (sem piscar)",
+	"Flèches de danger pour les tirs du boss hors écran": "Setas de perigo para os tiros do chefe fora da tela",
+	"Commandes tactiles pour gaucher (inversées)": "Controles de toque para canhotos (invertidos)",
+	"Sauvegarde : copier / restaurer": "Salvamento: copiar / restaurar",
+	"Copie ce code pour garder ta progression ; colle-le ici (ou sur un autre appareil) puis choisis Restaurer.": "Copie este código para guardar seu progresso; cole-o aqui (ou em outro dispositivo) e escolha Restaurar.",
+	"Code copié.": "Código copiado.",
+	"Sauvegarde restaurée.": "Progresso restaurado.",
+	"Code invalide : rien n'a été modifié.": "Código inválido: nada foi alterado.",
+	"Copier le code": "Copiar o código",
+	"Restaurer depuis le code": "Restaurar a partir do código",
 	"Premier éclat": "Primeiro fragmento",
 	"Termine une étape.": "Complete uma fase.",
 	"Sans une chute": "Nem uma queda",

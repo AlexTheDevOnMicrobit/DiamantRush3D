@@ -32,7 +32,7 @@ func _ready() -> void:
 	Global.restore_mods()
 	Global.play_ambient("menu")
 	_build_background()
-	for p in ["main", "run", "worlds", "challenges", "mods", "options", "access", "stats", "skins", "story", "help"]:
+	for p in ["main", "run", "worlds", "challenges", "mods", "options", "access", "backup", "stats", "skins", "story", "help"]:
 		var sc := ScrollContainer.new()
 		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		add_child(sc)
@@ -95,6 +95,7 @@ func _show(page_name: String) -> void:
 		"mods": _build_mods()
 		"options": _build_options()
 		"access": _build_access()
+		"backup": _build_backup()
 		"stats": _build_stats()
 		"skins": _build_skins()
 		"story": _build_story()
@@ -486,6 +487,7 @@ func _build_options() -> void:
 		cb.toggled.connect(_on_option_toggle.bind(String(entry[0])))
 		vb.add_child(cb)
 	vb.add_child(_centered(UI.button("Accessibilité et touches", _show.bind("access"), Vector2(560, 54))))
+	vb.add_child(_centered(UI.button("Sauvegarde : copier / restaurer", _show.bind("backup"), Vector2(560, 54))))
 	var danger := UI.button("Effacer la sauvegarde (records, succès, pièces)", _on_reset_progress, Vector2(560, 54))
 	danger.name = "ResetBtn"
 	vb.add_child(_centered(danger))
@@ -578,6 +580,39 @@ func _build_access() -> void:
 		keys.add_child(UI.button(label, _begin_capture.bind(String(a[0])), Vector2(220, 46)))
 	vb.add_child(_centered(UI.button("Touches par défaut", _reset_keys, Vector2(420, 50))))
 	vb.add_child(_centered(UI.button("Retour", _show.bind("options"), Vector2(420, 50))))
+
+
+func _build_backup() -> void:
+	var vb := _clear(pages["backup"])
+	_title(vb, tr("Sauvegarde : copier / restaurer"))
+	var info := UI.label(tr("Copie ce code pour garder ta progression ; colle-le ici (ou sur un autre appareil) puis choisis Restaurer."), 20, Color(0.85, 0.9, 1.0), HORIZONTAL_ALIGNMENT_CENTER)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.custom_minimum_size = Vector2(640, 0)
+	vb.add_child(info)
+	var te := TextEdit.new()
+	te.name = "CodeBox"
+	te.custom_minimum_size = Vector2(640, 150)
+	te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	te.text = Global.export_save_code()
+	vb.add_child(te)
+	var msg := UI.label("", 22, Color(1.0, 0.9, 0.4), HORIZONTAL_ALIGNMENT_CENTER)
+	msg.name = "BackupMsg"
+	vb.add_child(msg)
+	vb.add_child(_centered(UI.button("Copier le code", _backup_copy, Vector2(420, 50))))
+	vb.add_child(_centered(UI.button("Restaurer depuis le code", _backup_restore, Vector2(420, 50))))
+	vb.add_child(_centered(UI.button("Retour", _show.bind("options"), Vector2(420, 50))))
+
+
+func _backup_copy() -> void:
+	var te := pages["backup"].find_child("CodeBox", true, false) as TextEdit
+	DisplayServer.clipboard_set(te.text)
+	(pages["backup"].find_child("BackupMsg", true, false) as Label).text = tr("Code copié.")
+
+
+func _backup_restore() -> void:
+	var te := pages["backup"].find_child("CodeBox", true, false) as TextEdit
+	var ok := Global.import_save_code(te.text)
+	(pages["backup"].find_child("BackupMsg", true, false) as Label).text = tr("Sauvegarde restaurée.") if ok else tr("Code invalide : rien n'a été modifié.")
 
 
 func _begin_capture(action: String) -> void:
