@@ -20,7 +20,8 @@
 
 ### Vérifié
 - Exports Windows, Linux, Web et macOS construits avec les modèles officiels 4.3 ; l'exécutable Windows démarre.
-- L'export Android (APK) atteint l'étape finale en configuration complète mais échoue en `--headless` sous Windows (bug d'alignement de Godot 4.3) : voir `docs/ANDROID.md`. Le build Android passe par l'éditeur ou la CI.
+- Export Android (APK debug) construit en ligne de commande, signé et vérifié avec `apksigner` (v1, v2, v3). Sous Windows, certains antivirus font échouer les exports : désactiver « Safe Save » dans l'éditeur (voir `docs/ANDROID.md`).
+- Le build Web exige le rendu Compatibilité : réglage `renderer/rendering_method.web` rétabli.
 
 ## 2.0.0
 

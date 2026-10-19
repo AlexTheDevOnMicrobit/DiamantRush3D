@@ -323,7 +323,7 @@ git tag v3.0.0 && git push origin v3.0.0
 - **La souris ne bouge plus la caméra** : `Échap` (pause) puis *Reprendre*.
 - **Les commandes tactiles n'apparaissent pas** : Options → Commandes tactiles → *Toujours affichées*.
 - **Messages `mesh_get_surface_count` en test headless** : sans importance (rendu factice).
-- **Export Android en `--headless` sous Windows** : voir [docs/ANDROID.md](docs/ANDROID.md).
+- **Export qui échoue sous Windows (« Safe save failed », « Impossible de décompresser l'APK »)** : antivirus qui verrouille les fichiers temporaires ; voir [docs/ANDROID.md](docs/ANDROID.md#3-exporter).
 
 ---
 

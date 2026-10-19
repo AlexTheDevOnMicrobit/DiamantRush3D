@@ -57,9 +57,12 @@ godot --headless --path . --export-debug   "Android" build/android/DiamantRush3D
 godot --headless --path . --export-release "Android" build/android/DiamantRush3D.apk   # nécessite une clé release
 ```
 
-> **Problème connu (Godot 4.3, Windows)** : en mode `--headless`, l'étape « Alignement de l'APK » peut échouer avec
-> « Impossible de décompresser l'APK temporaire non aligné ». Dans ce cas, exporte depuis l'éditeur, ou utilise la
-> CI GitHub (Linux) fournie dans `.github/workflows/build.yml`, qui construit l'APK sans ce problème.
+> **Windows : « Safe save failed » / « Impossible de décompresser l'APK temporaire »**. Certains antivirus verrouillent les
+> fichiers temporaires de Godot et font échouer les exports (Android, mais aussi parfois Windows / Linux / Web). Solution :
+> dans l'éditeur, **Paramètres de l'éditeur → Système de fichiers → Sur enregistrement → désactive « Safe Save On Backup Then Rename »**
+> (clé `filesystem/on_save/safe_save_on_backup_then_rename`), ou ajoute le dossier de Godot aux exclusions de l'antivirus.
+> Un message « Cannot remove file … tmpexport-unaligned … » en fin d'export est sans gravité si l'APK est bien produit
+> (vérification : `apksigner verify --verbose DiamantRush3D.apk`).
 
 ### AAB pour Google Play
 
