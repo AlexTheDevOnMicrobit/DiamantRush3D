@@ -15,6 +15,7 @@ const TouchControls = preload("res://scripts/touch_controls.gd")
 const Achievements = preload("res://scripts/achievements.gd")
 const Boss = preload("res://scripts/boss.gd")
 const Ghost = preload("res://scripts/ghost.gd")
+const Tips = preload("res://scripts/tips.gd")
 
 const HEADINGS: Array[Vector3] = [
 	Vector3(0, 0, -1), Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0),
@@ -91,9 +92,26 @@ func _ready() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	Global.play_music(world)
 	_show_banner()
+	_show_tips()
 	for id in Global.toasts:
 		_toast(tr("Succès : ") + tr(Achievements.name_of(String(id))))
 	Global.toasts.clear()
+
+
+func _show_tips() -> void:
+	if not Global.options["tips"]:
+		return
+	var new_tips: Array = []
+	for pl in platforms:
+		var key: String = Tips.key_for(pl.kind)
+		if Tips.TIPS.has(key) and not Global.seen_tips.has(key) and not new_tips.has(key):
+			new_tips.append(key)
+	for key in new_tips.slice(0, 2):
+		Global.seen_tips[key] = true
+		_toast(tr("Astuce : ") + tr(Tips.TIPS[key]))
+	if new_tips.size() > 0:
+		Global.play_sfx("tip")
+		Global.save_game()
 
 
 func _exit_tree() -> void:
@@ -109,21 +127,23 @@ func _setup_viewport() -> void:
 
 func _build_environment() -> void:
 	var q := Global.quality()
+	var night: bool = Global.mods["night"]
+	var dk := 0.82 if night else 0.0
 	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = theme["sky_top"]
-	sky_mat.sky_horizon_color = theme["sky_horizon"]
-	sky_mat.ground_horizon_color = theme["sky_horizon"]
-	sky_mat.ground_bottom_color = Color(theme["sky_top"]).darkened(0.5)
+	sky_mat.sky_top_color = Color(theme["sky_top"]).darkened(dk)
+	sky_mat.sky_horizon_color = Color(theme["sky_horizon"]).darkened(dk)
+	sky_mat.ground_horizon_color = Color(theme["sky_horizon"]).darkened(dk)
+	sky_mat.ground_bottom_color = Color(theme["sky_top"]).darkened(0.5 + dk * 0.4)
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.9
+	env.ambient_light_energy = 0.12 if night else 0.9
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
-	env.fog_light_color = theme["sky_horizon"]
+	env.fog_light_color = Color(theme["sky_horizon"]).darkened(dk)
 	env.fog_density = 0.045 if Global.mods["fog"] else float(theme["fog"])
 	env.glow_enabled = q >= 1
 	env.glow_intensity = 0.8
@@ -135,8 +155,10 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-55, -30, 0)
 	sun.shadow_enabled = bool(Global.options["shadows"]) and q >= 1
 	sun.directional_shadow_max_distance = 90.0
-	if world == 11 or world == 10:
+	if world in [10, 11, 12, 14]:
 		sun.light_energy = 0.6
+	if night:
+		sun.light_energy = 0.08
 	add_child(sun)
 
 
@@ -239,7 +261,7 @@ func _build_course() -> void:
 	if is_boss:
 		boss = Boss.new()
 		add_child(boss)
-		boss.setup(player, arena_top, arena_half, float(data["difficulty"]))
+		boss.setup(player, arena_top, arena_half, float(data["difficulty"]), int(data["boss_variant"]), world)
 		boss.defeated.connect(_on_boss_defeated)
 		boss.progress.connect(_on_boss_progress)
 
@@ -475,6 +497,8 @@ func _update_hud() -> void:
 
 
 func set_checkpoint(pos: Vector3) -> void:
+	if Global.mods["nocp"]:
+		return # mode « sans checkpoint » : on repart toujours du départ
 	checkpoint = pos
 
 
@@ -602,6 +626,16 @@ func _win() -> void:
 	Global.stats["stages"] = int(Global.stats["stages"]) + 1
 	if not (Global.stats["worlds"] as Array).has(world):
 		(Global.stats["worlds"] as Array).append(world)
+	var stars := 1
+	if coins_total == 0 or coins_got >= coins_total:
+		stars += 1
+	if deaths == 0:
+		stars += 1
+	var new_stars := Global.record_stars(world, stars)
+	if boss_beaten:
+		var done: Array = Global.stats["bosses_done"]
+		if not done.has(int(data["boss_variant"])):
+			done.append(int(data["boss_variant"]))
 	var beat_ghost := ghost_prev_time >= 0.0 and time < ghost_prev_time
 	var new_ghost := Global.save_ghost(ghost_key, time, ghost_samples)
 	var got := Achievements.evaluate_stage(Global, {
@@ -609,14 +643,25 @@ func _win() -> void:
 		"length": int(Global.mods["length"]), "mods": Global.active_mod_count(),
 		"hardcore": Global.mods["hardcore"], "expert": int(Global.mods["difficulty"]) == 2,
 		"boost": got_boost, "wing": got_wing, "boss": boss_beaten, "beat_ghost": beat_ghost,
+		"secret": world >= LevelData.ADVENTURE_COUNT, "night": Global.mods["night"], "tiny": Global.mods["tiny"],
 	})
+	if Global.options["hat"] != "none" or Global.options["trail"] != "none":
+		if not Global.achievements.has("stylish"):
+			Global.achievements["stylish"] = true
+			got.append("stylish")
+	if stars >= 1:
+		Global.play_sfx("star")
 	if got.size() > 0:
 		Global.play_sfx("achievement")
 	Global.save_game()
 
 	var after: String = tr(Global.Story.STAGES[world]["after"])
+	var star_text := ""
+	for i in 3:
+		star_text += "[*]" if i < stars else "[ ]"
 	var lines: Array = [
 		after,
+		tr("Étoiles : %s   (total %d)") % [star_text, Global.total_stars()],
 		tr("Temps : %s   •   Pièces : %d / %d   •   Chutes : %d") % [Global.format_time(time), coins_got, coins_total, deaths],
 		tr("Score de l'étape : %d (x%.2f)") % [score, Global.multiplier()],
 	]

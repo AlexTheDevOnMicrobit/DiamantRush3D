@@ -7,6 +7,7 @@ const Story = preload("res://scripts/story.gd")
 const LevelData = preload("res://scripts/level_data.gd")
 const Achievements = preload("res://scripts/achievements.gd")
 const UpdateCheck = preload("res://scripts/update_check.gd")
+const Generator = preload("res://scripts/generator.gd")
 
 var pages: Dictionary = {}   # nom -> CenterContainer (contenu d'un ScrollContainer)
 var page_roots: Dictionary = {}
@@ -321,13 +322,24 @@ func _build_worlds() -> void:
 	var themes := LevelData.get_themes()
 	for i in themes.size():
 		var th: Dictionary = themes[i]
-		var boss_tag := tr("  [boss]") if i in [2, 5, 8, 11] else ""
-		var text := "%d — %s   %s%s" % [i + 1, tr(th["name"]), LevelData.difficulty_stars(float(th["difficulty"])), boss_tag]
+		if th.get("secret", false) and not Global.secret_unlocked():
+			continue
+		var boss_tag := tr("  [boss]") if Generator.is_boss_world(i) else ""
+		var secret_tag := "  *" if th.get("secret", false) else ""
+		var text := "%d — %s   %s%s%s" % [i + 1, tr(th["name"]), LevelData.difficulty_stars(float(th["difficulty"])), boss_tag, secret_tag]
+		text += "   " + _stars_text(i)
 		var key := "world_%d" % i
 		if Global.records.has(key):
 			text += "   •   %d pts" % int((Global.records[key] as Dictionary)["score"])
-		vb.add_child(_centered(UI.button(text, _start_world.bind(i), Vector2(640, 54))))
-	vb.add_child(_centered(UI.button("Retour", _show.bind("main"), Vector2(640, 54))))
+		vb.add_child(_centered(UI.button(text, _start_world.bind(i), Vector2(700, 54))))
+	if not Global.secret_unlocked():
+		_wrap(vb, tr("Termine l'Aventure pour débloquer 3 mondes secrets."), 18, Color(1, 0.9, 0.5))
+	vb.add_child(_centered(UI.button("Retour", _show.bind("main"), Vector2(700, 54))))
+
+
+func _stars_text(world: int) -> String:
+	var n := int(Global.world_stars.get(world, 0))
+	return "[" + "*".repeat(n) + ".".repeat(3 - n) + "]"
 
 
 func _start_world(i: int) -> void:
@@ -449,9 +461,13 @@ func _build_options() -> void:
 	_slider(grid, "Sensibilité caméra", "sens", 0.3, 3.0, 0.1)
 	_slider(grid, "Champ de vision (FOV)", "fov", 60.0, 110.0, 1.0)
 	_slider(grid, "Taille des commandes tactiles", "touch_scale", 0.7, 1.5, 0.05)
-	var langs := ["Automatique", "Français", "English"]
-	var cur_lang := ["auto", "fr", "en"].find(String(Global.options["language"]))
-	_opt_row(vb, "Langue", langs, maxi(cur_lang, 0), _on_language)
+	var langs: Array = []
+	var cur_lang := 0
+	for i in Global.LANGUAGES.size():
+		langs.append(Global.LANGUAGES[i][1])
+		if Global.LANGUAGES[i][0] == Global.options["language"]:
+			cur_lang = i
+	_opt_row(vb, "Langue", langs, cur_lang, _on_language)
 	_opt_row(vb, "Qualité", Global.QUALITY_NAMES, Global.quality(), _on_quality)
 	_opt_row(vb, "Commandes tactiles", ["Automatique", "Toujours affichées", "Masquées"], int(Global.options["touch"]), _on_touch_mode)
 	for entry in [
@@ -461,6 +477,7 @@ func _build_options() -> void:
 		["vibration", "Vibrations (mobile)"],
 		["hint", "Afficher l'aide des touches en jeu"],
 		["ghost", "Afficher le fantôme de ton meilleur temps"],
+		["tips", "Afficher les astuces pour les nouveaux pièges"],
 		["updates", "Vérifier les mises à jour (une requête vers GitHub)"],
 	]:
 		var cb := CheckButton.new()
@@ -476,7 +493,7 @@ func _build_options() -> void:
 
 
 func _on_language(idx: int) -> void:
-	Global.options["language"] = ["auto", "fr", "en"][idx]
+	Global.options["language"] = Global.LANGUAGES[idx][0]
 	Global.apply_language()
 	Global.save_game()
 	_show("options")
@@ -581,6 +598,7 @@ func _build_stats() -> void:
 	_wrap(vb, tr("Temps de jeu : %s   •   Étapes terminées : %d   •   Runs terminées : %d") % [Global.format_time(float(st["playtime"])), int(st["stages"]), int(st["runs"])], 18, Color(0.85, 0.9, 1.0))
 	_wrap(vb, tr("Pièces : %d   •   Sauts : %d   •   Chutes : %d   •   Mondes terminés : %d/12") % [int(st["coins"]), int(st["jumps"]), int(st["falls"]), (st["worlds"] as Array).size()], 18, Color(0.85, 0.9, 1.0))
 	_wrap(vb, tr("Boss vaincus : %d   •   Meilleure série infinie : %d étapes") % [int(st["bosses"]), int(st["endless_best"])], 18, Color(0.85, 0.9, 1.0))
+	_wrap(vb, tr("Étoiles : %d   •   Série de défis du jour : %d") % [Global.total_stars(), int(st["streak"])], 18, Color(0.85, 0.9, 1.0))
 
 	vb.add_child(UI.label(tr("Meilleurs scores"), 28, Color.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
 	var all_list: Array = Global.leaderboard["all"]
@@ -612,8 +630,9 @@ func _score_line(rank: int, e: Dictionary) -> String:
 
 func _build_skins() -> void:
 	var vb := _clear(pages["skins"])
-	_title(vb, tr("Apparences de Lumi"), tr("Ramasse des pièces pour débloquer de nouvelles couleurs. Pièces totales : %d") % int(Global.stats["coins"]))
+	_title(vb, tr("Apparences de Lumi"), tr("Les couleurs se débloquent avec les pièces, les chapeaux et traînées avec les étoiles. Pièces : %d   •   Étoiles : %d") % [int(Global.stats["coins"]), Global.total_stars()])
 	var cur := Global.current_skin()
+	vb.add_child(UI.label(tr("Couleur"), 26, Color.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
 	for s in Global.SKINS:
 		var unlocked := int(Global.stats["coins"]) >= int(s["cost"])
 		var text := tr(String(s["name"]))
@@ -621,12 +640,37 @@ func _build_skins() -> void:
 			text += "   (" + tr("verrouillé : %d pièces") % int(s["cost"]) + ")"
 		elif s["id"] == cur["id"]:
 			text += "   (" + tr("choisie") + ")"
-		var b := UI.button(text, _pick_skin.bind(String(s["id"])), Vector2(520, 54))
+		var b := UI.button(text, _pick_skin.bind(String(s["id"])), Vector2(520, 50))
 		b.disabled = not unlocked
 		if unlocked and s["id"] != "rainbow":
 			b.add_theme_color_override("font_color", Color(s["color"]).lightened(0.3))
 		vb.add_child(_centered(b))
+	vb.add_child(UI.label(tr("Chapeau"), 26, Color.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
+	for h in Global.HATS:
+		vb.add_child(_centered(_cosmetic_button(h, "hat", Global.current_hat())))
+	vb.add_child(UI.label(tr("Traînée"), 26, Color.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
+	for t in Global.TRAILS:
+		vb.add_child(_centered(_cosmetic_button(t, "trail", Global.current_trail())))
 	vb.add_child(_centered(UI.button("Retour", _show.bind("main"), Vector2(520, 54))))
+
+
+func _cosmetic_button(item: Dictionary, option_key: String, current: String) -> Button:
+	var unlocked := Global.hat_unlocked(item)
+	var text := tr(String(item["name"]))
+	if not unlocked:
+		text += "   (" + tr("verrouillé : %d étoiles") % int(item["stars"]) + ")"
+	elif item["id"] == current:
+		text += "   (" + tr("choisie") + ")"
+	var b := UI.button(text, _pick_cosmetic.bind(option_key, String(item["id"])), Vector2(520, 50))
+	b.disabled = not unlocked
+	return b
+
+
+func _pick_cosmetic(option_key: String, id: String) -> void:
+	Global.options[option_key] = id
+	Global.save_game()
+	Global.play_sfx("equip")
+	_build_skins()
 
 
 func _pick_skin(id: String) -> void:
@@ -665,7 +709,9 @@ func _build_help() -> void:
 		"Canons rouges : tirs à esquiver • Bouton rouge : fait apparaître le pont transparent",
 		"Anneau violet : portail vers la dalle suivante",
 		"Bonus flottants : flèche orange = vitesse • ailes = saut supplémentaire",
-		"Boss de fin des mondes 3, 6, 9 et 12 : survis à ses attaques, 3 vies",
+		"Boss de fin des mondes 3, 6, 9, 12 et 15 : survis à ses attaques, 3 vies",
+		"Bumper orange : il te repousse • Dalle bleu glacier : sol glissant",
+		"Étoiles (max 3 par monde) : finis l'étape, ramasse toutes les pièces, ne tombe pas",
 		"Ramasse les pièces dorées et atteins le diamant !",
 	]:
 		_wrap(vb, tr(l), 20, Color.WHITE, 760)

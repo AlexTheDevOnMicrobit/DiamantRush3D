@@ -68,6 +68,21 @@ const STAGES := [
 		"before": "Plus de sol, plus de murs, seulement des étoiles et des plateformes minuscules. Le dernier éclat est au bout. Respire, Lumi.",
 		"after": "Douze éclats. Il ne reste qu'à les réunir.",
 	},
+	{
+		"title": "XIII — Les Abysses Lumineuses",
+		"before": "Sous les îles, un océan secret brille de mille lueurs. Les méduses dansent en orbite, les courants montent et descendent. Un monde caché, réservé à celles et ceux qui ont tout fini.",
+		"after": "Les abysses s'illuminent, une dernière fois, rien que pour toi.",
+	},
+	{
+		"title": "XIV — Le Pays des Sucreries",
+		"before": "Des sucettes géantes, des nuages de barbe à papa, des bumpers en caramel : l'Ombre n'a jamais osé venir ici. Amuse-toi, Lumi, tu l'as bien mérité.",
+		"after": "Un parfum de vanille flotte dans l'air. Le phare a presque faim.",
+	},
+	{
+		"title": "XV — La Forteresse de l'Ombre",
+		"before": "Au cœur du royaume se cache la forteresse de l'Ombre. Chaque salle est un piège, chaque couloir une épreuve. Au sommet t'attend son ultime sentinelle.",
+		"after": "La forteresse s'effondre dans un grand silence. Cette fois, l'Ombre ne reviendra plus.",
+	},
 ]
 
 const ENDING_TITLE := "La lumière revient"

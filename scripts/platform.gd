@@ -17,14 +17,14 @@ const BRIDGE_TIME := 8.0
 
 const SYMBOLS := {
 	"m": "<>", "f": "x", "k": "~", "v": ">>", "o": "O", "l": "^v", "b": "^", "s": "*",
-	"y": "SW", "z": "[]", "j": "=>", "t": "o=", "p": "()", "q": "()", "c": "CP",
+	"y": "SW", "z": "[]", "j": "=>", "t": "o=", "p": "()", "q": "()", "c": "CP", "r": "@", "g": "i",
 }
 ## Palette adaptée au daltonisme (Okabe-Ito)
 const CB_COLORS := {
 	"m": Color(0.0, 0.45, 0.7), "f": Color(0.84, 0.37, 0.0), "c": Color(0.0, 0.62, 0.45), "b": Color(0.8, 0.47, 0.65),
 	"k": Color(0.94, 0.89, 0.26), "v": Color(0.45, 0.45, 0.45), "o": Color(0.34, 0.71, 0.91), "l": Color(0.9, 0.62, 0.0),
 	"t": Color(0.6, 0.15, 0.1), "j": Color(1.0, 0.9, 0.2), "y": Color(0.5, 0.5, 0.5), "z": Color(0.3, 0.8, 0.9),
-	"p": Color(0.55, 0.3, 0.8), "q": Color(0.55, 0.3, 0.8),
+	"p": Color(0.55, 0.3, 0.8), "q": Color(0.55, 0.3, 0.8), "r": Color(0.9, 0.4, 0.05), "g": Color(0.65, 0.88, 1.0),
 }
 
 var kind := "n"
@@ -60,6 +60,8 @@ var _cannon: Node3D
 var _cannon_mat: StandardMaterial3D
 var _cannon_dir := Vector3.RIGHT
 var _button_mat: StandardMaterial3D
+var _bumper: MeshInstance3D
+var _bump_cd := 0.0
 
 
 func _ready() -> void:
@@ -84,6 +86,8 @@ func _ready() -> void:
 		"y": tcol = Color(0.55, 0.55, 0.6)
 		"z": tcol = Color(0.4, 0.9, 1.0)
 		"p", "q": tcol = Color(0.6, 0.35, 0.9)
+		"r": tcol = Color(1.0, 0.5, 0.2)
+		"g": tcol = Color(0.7, 0.92, 1.0)
 	if Global.options["colorblind"] and CB_COLORS.has(kind):
 		tcol = CB_COLORS[kind]
 
@@ -114,7 +118,7 @@ func _ready() -> void:
 	_mat.albedo_texture = Textures.speckle(2)
 	_mat.uv1_triplanar = true
 	_mat.uv1_scale = Vector3(0.5, 0.5, 0.5)
-	if kind in ["b", "k", "o", "l", "j", "p", "q"]:
+	if kind in ["b", "k", "o", "l", "j", "p", "q", "g"]:
 		_mat.emission_enabled = true
 		_mat.emission = tcol
 		_mat.emission_energy_multiplier = 0.6
@@ -173,7 +177,7 @@ func _ready() -> void:
 	_col.disabled = kind == "z"
 	add_child(_col)
 
-	if kind in ["f", "c", "b", "j", "y", "p"]:
+	if kind in ["f", "c", "b", "j", "y", "p", "r", "g"]:
 		var area := Area3D.new()
 		area.collision_layer = 0
 		area.collision_mask = 2
@@ -184,10 +188,15 @@ func _ready() -> void:
 		if kind == "p":
 			area_shape.size = Vector3(1.8, 2.4, 1.8)
 			ac.position.y = size.y * 0.5 + 1.2
+		if kind == "r":
+			area_shape.size = Vector3(1.7, 1.6, 1.7)
+			ac.position.y = size.y * 0.5 + 0.8
 		ac.shape = area_shape
 		area.add_child(ac)
 		add_child(area)
 		area.body_entered.connect(_on_body_entered)
+		if kind == "g":
+			area.body_exited.connect(_on_body_exited)
 
 	if kind == "s":
 		_beam = AnimatableBody3D.new()
@@ -257,6 +266,24 @@ func _build_special() -> void:
 			dmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			disc.material_override = dmat
 			_visual.add_child(disc)
+		"r":
+			_bumper = MeshInstance3D.new()
+			var bc2 := CylinderMesh.new()
+			bc2.top_radius = 0.9
+			bc2.bottom_radius = 1.15
+			bc2.height = 0.9
+			_bumper.mesh = bc2
+			_bumper.material_override = Models.material(Color(1.0, 0.35, 0.1), 1.6)
+			_bumper.position = Vector3(0, size.y * 0.5 + 0.45, 0)
+			_visual.add_child(_bumper)
+			var cap := MeshInstance3D.new()
+			var cm2 := SphereMesh.new()
+			cm2.radius = 0.8
+			cm2.height = 0.5
+			cap.mesh = cm2
+			cap.material_override = Models.material(Color(1.0, 0.9, 0.3), 2.0)
+			cap.position = Vector3(0, 0.45, 0)
+			_bumper.add_child(cap)
 		"t":
 			var sgn := 1.0 if int(absi(prop_seed) % 2) == 0 else -1.0
 			var half_r := (size.x if absf(move_axis.x) > 0.5 else size.z) * 0.5
@@ -340,6 +367,9 @@ func _physics_process(delta: float) -> void:
 			position = _origin + Vector3(0, sin(_t * 0.8) * 1.6, 0)
 		"f":
 			_update_fall(delta)
+		"r":
+			_bump_cd = maxf(_bump_cd - delta, 0.0)
+			_bumper.scale = _bumper.scale.lerp(Vector3.ONE, 1.0 - exp(-10.0 * delta))
 		"s":
 			_beam.rotation.y += delta * 1.8
 		"t":
@@ -444,6 +474,19 @@ func _on_body_entered(body) -> void:
 					_button_mat.albedo_color = Color(0.2, 1.0, 0.3)
 					_button_mat.emission = Color(0.2, 1.0, 0.3)
 					get_tree().create_timer(BRIDGE_TIME).timeout.connect(_reset_button)
+		"r":
+			if _bump_cd <= 0.0:
+				_bump_cd = 0.25
+				var away: Vector3 = body.global_position - global_position
+				away.y = 0.0
+				away = away.normalized() if away.length() > 0.05 else forward
+				var sgb := sqrt(Global.gravity_scale())
+				body.launch(away * 4.5 * sgb + Vector3(0, 5.0 * sgb, 0))
+				Global.play_sfx("bumper")
+				Global.stats["bumps"] = int(Global.stats.get("bumps", 0)) + 1
+				_bumper.scale = Vector3(1.35, 0.7, 1.35)
+		"g":
+			body.ice_count += 1
 		"p":
 			if partner:
 				var dest: Vector3 = partner.global_position + Vector3(0, partner.size.y * 0.5 + 0.3, 0)
@@ -452,6 +495,11 @@ func _on_body_entered(body) -> void:
 				Fx.burst(get_parent(), dest + Vector3(0, 1.0, 0), Color(0.8, 0.5, 1.0), 20, 5.0, false)
 				Global.play_sfx("portal")
 				Global.vibrate(40)
+
+
+func _on_body_exited(body) -> void:
+	if kind == "g" and body.is_in_group("player"):
+		body.ice_count = maxi(body.ice_count - 1, 0)
 
 
 func _reset_button() -> void:

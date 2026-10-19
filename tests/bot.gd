@@ -21,7 +21,7 @@ func _initialize():
 	Engine.max_physics_steps_per_frame = 16
 	var ok := 0; var tot := 0; var fails := []
 	for sd in range(s0, s1):
-		for st in 12:
+		for st in 15:
 			if args.size() > 3 and st != int(args[3]): continue
 			var r = await run_stage(sd * 13 + 5, st)
 			tot += 1
@@ -81,6 +81,19 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 		if str(plats[cur].kind) == 'p':
 			ti = cur # on marche jusqu'au centre pour déclencher le portail
 		var tp: Vector3 = lv.platforms[ti].global_position + Vector3(0, 0.5, 0)
+		# cible = dalle à bumper : on vise un couloir latéral (pas le centre qui repousse)
+		if str(plats[ti].kind) == 'r' and ti != cur:
+			var to_b := Vector3(tp.x - pp.x, 0, tp.z - pp.z).normalized()
+			var perp_b := Vector3(-to_b.z, 0, to_b.x)
+			tp = Vector3(tp.x + perp_b.x * 1.8, tp.y, tp.z + perp_b.z * 1.8)
+		# bumper : on le contourne par le côté (waypoint) tant qu'on n'a pas dépassé son centre
+		if str(plats[cur].kind) == 'r' and pl.is_on_floor():
+			var pc: Vector3 = plats[cur].global_position
+			var to_t := Vector3(tp.x - pc.x, 0, tp.z - pc.z).normalized()
+			var perp := Vector3(-to_t.z, 0, to_t.x)
+			if (pp - pc).dot(to_t) < 0.9:
+				var side := perp if (pp - pc).dot(perp) >= 0.0 else -perp
+				tp = Vector3(pc.x + side.x * 1.7 + to_t.x * 0.9, tp.y, pc.z + side.z * 1.7 + to_t.z * 0.9)
 		var flat := Vector3(tp.x - pp.x, 0, tp.z - pp.z)
 		var dist := flat.length()
 		var dir := flat.normalized()
@@ -101,7 +114,7 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 			elif outside and ti != cur:
 				var tg: float = 3.0 if ti == 0 else float(kinds[ti - 1][0])
 				var nominal := Vector2(tpl._origin.x - pp.x, tpl._origin.z - pp.z).length()
-				var stable: bool = str(cp.kind) in ['n', 'c', 's', 'v', 'b', 'y', 't', 'j', 'p', 'q']
+				var stable: bool = str(cp.kind) in ['n', 'c', 's', 'v', 'b', 'y', 't', 'j', 'p', 'q', 'r', 'g']
 				if not stable:
 					want_jump = true # on n'attend pas sur une dalle instable
 				elif tkind == "m" and dist > tg + 3.2:

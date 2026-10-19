@@ -4,6 +4,7 @@ extends RefCounted
 ##   type : n normale | m mobile | f friable | c checkpoint | b trampoline | s tourniquet
 ##          k clignotante | v tapis roulant | o orbitale | l ascenseur
 ##          t canon | j lanceur | y interrupteur | z pont | p portail (entrée) | q portail (sortie)
+##          r bumper | g plaque de glace
 ##   cap  : (optionnel) nouvelle direction 0 = -Z, 1 = +X, 2 = +Z, 3 = -X
 
 const LevelData = preload("res://scripts/level_data.gd")
@@ -11,9 +12,9 @@ const HEADINGS: Array[Vector3] = [
 	Vector3(0, 0, -1), Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0),
 ]
 const UNSTABLE := ["m", "f", "k", "o", "l", "z"]
-const ALL_KINDS := ["n", "m", "f", "s", "b", "k", "v", "o", "l", "t", "j", "y", "p"]
+const ALL_KINDS := ["n", "m", "f", "s", "b", "k", "v", "o", "l", "t", "j", "y", "p", "r", "g"]
 const MAX_COUNT := 90
-const BOSS_WORLDS := [2, 5, 8, 11]
+const BOSS_WORLDS := [2, 5, 8, 11, 14]
 
 
 static func is_boss_world(theme_idx: int) -> bool:
@@ -176,6 +177,7 @@ static func generate(seed_value: int, theme_idx: int, run_pos: int = 0, length_m
 		"steps": steps,
 		"powerups": powerups,
 		"boss": boss,
+		"boss_variant": BOSS_WORLDS.find(theme_idx),
 	}
 
 
@@ -217,6 +219,8 @@ static func _pick_kind(rng: RandomNumberGenerator, weights: Dictionary, i: int, 
 	if prev_kind in ["q", "z"]:
 		for k in ["p", "y", "j", "b", "t"]:
 			w[k] = 0.0
+	if prev_kind == "r":
+		w["r"] = 0.0
 	if prev_kind == "t" or hazard_run >= 2:
 		w["t"] = 0.0
 		w["s"] = 0.0
@@ -267,7 +271,11 @@ static func _pick_size(rng: RandomNumberGenerator, kind: String, base: float, la
 			s = clampf(s, 4.0, 5.0)
 		"q":
 			s = clampf(s, 3.6, 5.0)
-	if rng.randf() < 0.3 and not (kind in ["v", "t", "p", "q", "y", "z", "j"]):
+		"r":
+			s = clampf(s, 4.6, 6.0)
+		"g":
+			s = clampf(s, 3.4, 5.4)
+	if rng.randf() < 0.3 and not (kind in ["v", "t", "p", "q", "y", "z", "j", "r", "g"]):
 		return Vector2(s, clampf(s + rng.randf_range(-0.8, 0.8), 2.6, 6.0))
 	return Vector2(s, s)
 

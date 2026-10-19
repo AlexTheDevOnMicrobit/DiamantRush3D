@@ -38,6 +38,9 @@ var coyote_time := 0.12
 var buffer_time := 0.12
 var hit_cd := 0.0     # invulnérabilité après un coup
 var launch_t := 0.0   # après un lanceur : le contrôle aérien est réduit
+var ice_count := 0    # nombre de plaques de glace sous Lumi
+var model_base := 1.0 # 0.6 avec « Lumi miniature »
+var trail: CPUParticles3D
 var flash_t := 0.0
 var shadow: MeshInstance3D
 var shadow_mat: StandardMaterial3D
@@ -71,17 +74,31 @@ func _ready() -> void:
 		coyote_time = 0.25
 		buffer_time = 0.25
 
+	var tiny: bool = Global.mods["tiny"]
+	model_base = 0.6 if tiny else 1.0
+	if tiny:
+		cam_dist = 5.0
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
-	cap.radius = 0.4
-	cap.height = 1.8
+	cap.radius = 0.4 * model_base
+	cap.height = 1.8 * model_base
 	cs.shape = cap
-	cs.position.y = 0.9
+	cs.position.y = 0.9 * model_base
 	add_child(cs)
 
 	var skin := Global.current_skin()
 	rainbow = skin["id"] == "rainbow"
 	_build_robot(skin["color"])
+	model.scale = Vector3.ONE * model_base
+	_build_hat(Global.current_hat())
+	_build_trail(Global.current_trail())
+	if Global.mods["night"]:
+		var lamp := OmniLight3D.new()
+		lamp.light_color = Color(1.0, 0.92, 0.7)
+		lamp.omni_range = 11.0
+		lamp.light_energy = 3.0
+		lamp.position = Vector3(0, 1.6 * model_base, 0)
+		add_child(lamp)
 
 	pivot = Node3D.new()
 	pivot.top_level = true
@@ -216,7 +233,7 @@ func _physics_process(delta: float) -> void:
 
 	var on_floor := is_on_floor()
 	var accel := 60.0 if on_floor else 32.0
-	if Global.mods["ice"] or world_ice:
+	if Global.mods["ice"] or world_ice or ice_count > 0:
 		accel = 5.0 if on_floor else 20.0
 	if launch_t > 0.0 and not on_floor:
 		accel = 2.0
@@ -312,8 +329,11 @@ func _process(delta: float) -> void:
 
 	if rainbow and body_mat:
 		body_mat.albedo_color = Color.from_hsv(fposmod(Time.get_ticks_msec() / 2500.0, 1.0), 0.7, 1.0)
+	if trail:
+		trail.emitting = Vector2(velocity.x, velocity.z).length() > 1.5 or not is_on_floor()
+		trail.global_position = global_position + Vector3(0, 0.3, 0)
 	# animation
-	model.scale = model.scale.lerp(Vector3.ONE, 1.0 - exp(-12.0 * delta))
+	model.scale = model.scale.lerp(Vector3.ONE * model_base, 1.0 - exp(-12.0 * delta))
 	var hspeed := Vector2(velocity.x, velocity.z).length()
 	if is_on_floor():
 		walk_phase += delta * hspeed * 1.5
@@ -389,3 +409,135 @@ func launch(vel: Vector3) -> void:
 	Global.play_sfx("launch")
 	Global.vibrate(30)
 	Fx.burst(get_parent(), global_position, Color(1.0, 0.9, 0.3), 14, 4.0)
+
+
+## Chapeau (débloqué avec les étoiles) posé sur la tête de Lumi.
+func _build_hat(id: String) -> void:
+	if id == "none":
+		return
+	var hat := Node3D.new()
+	hat.position = Vector3(0, 1.78, 0)
+	body_root.add_child(hat)
+	match id:
+		"beanie":
+			_part(_cone(0.34, 0.45), Color(0.9, 0.15, 0.2), hat, Vector3(0, 0.12, 0))
+			_part(_ball(0.1), Color(1, 1, 1), hat, Vector3(0, 0.4, 0))
+		"crown":
+			var ring := CylinderMesh.new()
+			ring.top_radius = 0.26
+			ring.bottom_radius = 0.28
+			ring.height = 0.16
+			_part(ring, Color(1.0, 0.82, 0.2), hat, Vector3(0, 0.05, 0), 0.8)
+			for i in 5:
+				var a := TAU * float(i) / 5.0
+				_part(_cone(0.07, 0.2), Color(1.0, 0.82, 0.2), hat, Vector3(cos(a) * 0.24, 0.22, sin(a) * 0.24), 0.8)
+		"tophat":
+			var tube := CylinderMesh.new()
+			tube.top_radius = 0.2
+			tube.bottom_radius = 0.2
+			tube.height = 0.42
+			_part(tube, Color(0.08, 0.08, 0.1), hat, Vector3(0, 0.2, 0))
+			var brim := CylinderMesh.new()
+			brim.top_radius = 0.36
+			brim.bottom_radius = 0.36
+			brim.height = 0.04
+			_part(brim, Color(0.08, 0.08, 0.1), hat, Vector3(0, 0.0, 0))
+			var band := CylinderMesh.new()
+			band.top_radius = 0.205
+			band.bottom_radius = 0.205
+			band.height = 0.08
+			_part(band, Color(0.8, 0.1, 0.15), hat, Vector3(0, 0.08, 0))
+		"viking":
+			var dome := SphereMesh.new()
+			dome.radius = 0.33
+			dome.height = 0.5
+			_part(dome, Color(0.6, 0.62, 0.68), hat, Vector3(0, 0.0, 0), 0.0)
+			for sx in [-1.0, 1.0]:
+				var horn := _part(_cone(0.07, 0.4), Color(0.95, 0.92, 0.8), hat, Vector3(0.34 * sx, 0.12, 0))
+				horn.rotation_degrees.z = -35.0 * sx
+		"halo":
+			var tm := TorusMesh.new()
+			tm.inner_radius = 0.22
+			tm.outer_radius = 0.3
+			tm.rings = 18
+			tm.ring_segments = 6
+			_part(tm, Color(1.0, 0.9, 0.3), hat, Vector3(0, 0.45, 0), 3.0)
+		"devil":
+			for sx2 in [-1.0, 1.0]:
+				var horn2 := _part(_cone(0.07, 0.3), Color(0.85, 0.05, 0.1), hat, Vector3(0.18 * sx2, 0.1, 0), 0.8)
+				horn2.rotation_degrees.z = -20.0 * sx2
+
+
+func _cone(radius: float, height: float) -> CylinderMesh:
+	var c := CylinderMesh.new()
+	c.top_radius = 0.0
+	c.bottom_radius = radius
+	c.height = height
+	c.radial_segments = 8
+	return c
+
+
+func _ball(radius: float) -> SphereMesh:
+	var sm := SphereMesh.new()
+	sm.radius = radius
+	sm.height = radius * 2.0
+	return sm
+
+
+## Traînée de particules (débloquée avec les étoiles).
+func _build_trail(id: String) -> void:
+	if id == "none":
+		return
+	trail = CPUParticles3D.new()
+	trail.local_coords = false
+	trail.lifetime = 0.8
+	trail.amount = 28
+	trail.direction = Vector3.UP
+	trail.spread = 25.0
+	trail.initial_velocity_min = 0.2
+	trail.initial_velocity_max = 0.8
+	trail.gravity = Vector3.ZERO
+	trail.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	trail.emission_sphere_radius = 0.2
+	var color := Color(1, 1, 1)
+	var radius := 0.08
+	match id:
+		"sparks":
+			color = Color(1.0, 0.9, 0.3)
+			trail.gravity = Vector3(0, -4.0, 0)
+			trail.lifetime = 0.5
+			trail.initial_velocity_max = 2.0
+		"flames":
+			color = Color(1.0, 0.45, 0.1)
+			trail.gravity = Vector3(0, 2.5, 0)
+			radius = 0.13
+		"rainbow":
+			radius = 0.1
+			var gr := Gradient.new()
+			gr.colors = PackedColorArray([Color(1, 0.2, 0.2), Color(1, 0.8, 0.2), Color(0.3, 1, 0.3), Color(0.2, 0.6, 1), Color(0.7, 0.3, 1)])
+			gr.offsets = PackedFloat32Array([0.0, 0.25, 0.5, 0.75, 1.0])
+			trail.color_ramp = gr
+		"stars":
+			color = Color(1.0, 0.95, 0.4)
+			radius = 0.1
+			trail.initial_velocity_max = 1.5
+		"smoke":
+			color = Color(0.7, 0.7, 0.75)
+			trail.gravity = Vector3(0, 1.0, 0)
+			radius = 0.16
+			trail.scale_amount_max = 2.0
+	var sm := SphereMesh.new()
+	sm.radius = radius
+	sm.height = radius * 2.0
+	sm.radial_segments = 6
+	sm.rings = 3
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color
+	m.vertex_color_use_as_albedo = true
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sm.material = m
+	trail.mesh = sm
+	if id != "rainbow":
+		trail.color = color
+	trail.emitting = false
+	add_child(trail)

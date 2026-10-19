@@ -1,5 +1,5 @@
 extends SceneTree
-## Test de fumée complet de la 3.1.0.
+## Test de fumée complet de la 3.2.0.
 ## Usage : godot --headless --path . --script tests/smoke.gd
 ## Code de sortie 0 si tout passe, 1 sinon.
 
@@ -8,7 +8,8 @@ const LevelData = preload("res://scripts/level_data.gd")
 const Achievements = preload("res://scripts/achievements.gd")
 const Projectile = preload("res://scripts/projectile.gd")
 const Translations = preload("res://scripts/translations.gd")
-const ALL_KINDS := ["n", "m", "f", "c", "b", "s", "k", "v", "o", "l", "t", "j", "y", "z", "p", "q"]
+const ALL_KINDS := ["n", "m", "f", "c", "b", "s", "k", "v", "o", "l", "t", "j", "y", "z", "p", "q", "r", "g"]
+const BOSS_WORLDS := [2, 5, 8, 11, 14]
 
 var g
 var failures := 0
@@ -37,6 +38,7 @@ func _initialize() -> void:
 	await _test_worlds()
 	await _test_platform_behaviours()
 	await _test_boss()
+	await _test_new_content()
 	await _test_endless()
 	_test_challenges_and_codes()
 	await _test_ghost()
@@ -58,13 +60,13 @@ func _initialize() -> void:
 # ---------------------------------------------------------------- générateur
 
 func _test_generator() -> void:
-	print("== Générateur : 12 mondes x 4 longueurs x 3 difficultés x 8 seeds")
+	print("== Générateur : 15 mondes x 4 longueurs x 3 difficultés x 8 seeds")
 	var kinds := {}
 	var bad := 0
 	var det := true
 	var pair_bad := 0
 	var boss_bad := 0
-	for w in 12:
+	for w in 15:
 		for li in 4:
 			for dsel in 3:
 				for sd in 8:
@@ -88,7 +90,7 @@ func _test_generator() -> void:
 						prev = k
 						idx += 1
 					var last: Array = d["steps"][d["steps"].size() - 1]
-					var is_boss: bool = w in [2, 5, 8, 11]
+					var is_boss: bool = w in BOSS_WORLDS
 					if bool(d["boss"]) != is_boss:
 						boss_bad += 1
 					if is_boss and float(last[3]) < 20.0:
@@ -99,13 +101,14 @@ func _test_generator() -> void:
 						det = false
 	check(bad == 0, "comptes et écarts valides (anomalies : %d)" % bad)
 	check(pair_bad == 0, "interrupteur -> pont et portail -> sortie toujours appariés (%d erreurs)" % pair_bad)
-	check(boss_bad == 0, "arène de boss uniquement aux mondes 3, 6, 9, 12 (%d erreurs)" % boss_bad)
+	check(boss_bad == 0, "arène de boss uniquement aux mondes 3, 6, 9, 12 et 15 (%d erreurs)" % boss_bad)
 	check(det, "génération déterministe")
 	print("     types de plateformes : ", kinds)
 	for k in ALL_KINDS:
 		check(kinds.has(k), "type '%s' généré" % k)
 	var d_easy: Dictionary = Gen.generate(5, 0, 0, 1.0, 1)
 	var d_hard: Dictionary = Gen.generate(5, 11, 0, 1.0, 1)
+	check(int(Gen.generate(5, 14, 0, 1.0, 1)["boss_variant"]) == 4 and int(Gen.generate(5, 2, 0, 1.0, 1)["boss_variant"]) == 0, "variante de boss selon le monde")
 	check(d_hard["steps"].size() > d_easy["steps"].size(), "le monde 12 est plus long que le monde 1")
 	var d_long: Dictionary = Gen.generate(5, 4, 0, 3.0, 1)
 	var d_norm: Dictionary = Gen.generate(5, 4, 0, 1.0, 1)
@@ -117,7 +120,7 @@ func _test_generator() -> void:
 # ---------------------------------------------------------------- construction des mondes
 
 func _test_worlds() -> void:
-	print("== Les 12 mondes se construisent (tous modificateurs, Marathon, Expert)")
+	print("== Les 15 mondes se construisent (tous modificateurs, Marathon, Expert)")
 	g.mods["gravity"] = 0
 	g.mods["length"] = 3
 	g.mods["difficulty"] = 2
@@ -125,7 +128,7 @@ func _test_worlds() -> void:
 		g.mods[t[0]] = true
 	g.mods["hardcore"] = false
 	var seen_kinds := {}
-	for w in 12:
+	for w in 15:
 		g.reset_run(1000 + w)
 		g.run["stages"] = [w]
 		g.run["mode"] = "free"
@@ -141,7 +144,7 @@ func _test_worlds() -> void:
 			if p.kind == "y" or p.kind == "p":
 				if p.partner == null:
 					check(false, "  partenaire manquant (%s)" % p.kind)
-		check((lv.boss != null) == (w in [2, 5, 8, 11]), "  boss présent seulement dans les mondes 3, 6, 9, 12")
+		check((lv.boss != null) == (w in BOSS_WORLDS), "  boss présent seulement dans les mondes 3, 6, 9, 12, 15")
 		lv.player.global_position.y = lv.kill_y - 1
 		for f in 3:
 			await physics_frame
@@ -550,6 +553,21 @@ func _test_misc() -> void:
 	check(all_ok and Translations.EN.size() > 280, "traductions complètes (%d textes)" % Translations.EN.size())
 	check("%d" in tr("Étape %d/%d — %s") and tr("Étape %d/%d — %s") % [1, 12, "X"] == "Stage 1/12 — X", "formats traduits")
 	check(g.mod_summary() == "No modifiers", "résumé des modificateurs en anglais")
+	for pair in [["es", Translations.ES], ["de", Translations.DE], ["it", Translations.IT], ["pt", Translations.PT]]:
+		var lang_code: String = pair[0]
+		var table: Dictionary = pair[1]
+		g.options["language"] = lang_code
+		g.apply_language()
+		var same := 0
+		for k in Translations.EN:
+			if not table.has(k) or String(table[k]) == "":
+				same += 100000
+		check(table.size() == Translations.EN.size() and same == 0, "langue %s : %d textes, aucun manquant" % [lang_code, table.size()])
+		check(tr("Nouvelle run") != "Nouvelle run" and tr("Étape %d/%d — %s") % [1, 12, "X"] != "", "langue %s active (%s)" % [lang_code, tr("Nouvelle run")])
+		check(g.mod_summary() != "Aucun modificateur" and g.mod_summary() != "No modifiers", "résumé des modificateurs traduit (%s)" % lang_code)
+	g.options["language"] = "auto"
+	g.apply_language()
+	check(["fr", "en", "es", "de", "it", "pt"].has(TranslationServer.get_locale().substr(0, 2)), "langue automatique : %s" % TranslationServer.get_locale())
 	g.options["language"] = "fr"
 	g.apply_language()
 	check(tr("Nouvelle run") == "Nouvelle run" and g.mod_summary() == "Aucun modificateur", "retour au français")
@@ -577,13 +595,13 @@ func _test_menus() -> void:
 	var menu = load("res://scenes/main_menu.tscn").instantiate()
 	root.add_child(menu)
 	await process_frame
-	for lang in ["fr", "en"]:
+	for lang in ["fr", "en", "es", "de", "it", "pt"]:
 		g.options["language"] = lang
 		g.apply_language()
 		for p in ["main", "run", "worlds", "challenges", "mods", "options", "access", "stats", "skins", "story", "help"]:
 			menu._show(p)
 			await process_frame
-	check(true, "11 pages du menu construites en français et en anglais")
+	check(true, "11 pages du menu construites dans les 6 langues")
 	g.options["language"] = "fr"
 	g.apply_language()
 	menu._show("run")
@@ -720,3 +738,177 @@ func _drag(idx: int, pos: Vector2, rel: Vector2) -> InputEventScreenDrag:
 	e.position = pos
 	e.relative = rel
 	return e
+
+
+# ---------------------------------------------------------------- contenu 3.2.0
+
+func _test_new_content() -> void:
+	print("== Contenu 3.2.0 : bumper, glace, mondes secrets, étoiles, cosmétiques, nouveaux modificateurs, astuces")
+	g.reset_mods(false)
+	g.reset_stats()
+	# bumper
+	var lv = await _find_level("r")
+	check(lv != null, "niveau avec bumper trouvé")
+	if lv:
+		var r = _first(lv, "r")
+		lv.player.teleport(r.global_position + Vector3(0.4, 1.3, 0.2))
+		var p0: Vector3 = lv.player.global_position
+		var far := 0.0
+		for f in 40:
+			await physics_frame
+			far = maxf(far, Vector2(lv.player.global_position.x - p0.x, lv.player.global_position.z - p0.z).length())
+		check(far > 2.0 and int(g.stats["bumps"]) >= 1, "le bumper repousse Lumi (%.1f m) et compte la statistique" % far)
+		root.remove_child(lv)
+		lv.free()
+	# plaque de glace
+	lv = await _find_level("g")
+	check(lv != null, "niveau avec plaque de glace trouvé")
+	if lv:
+		var gp = _first(lv, "g")
+		lv.player.teleport(gp.global_position + Vector3(0, 1.3, 0))
+		for f in 15:
+			await physics_frame
+		check(lv.player.ice_count >= 1, "la plaque de glace rend le sol glissant (ice_count=%d)" % lv.player.ice_count)
+		lv.player.teleport(gp.global_position + Vector3(0, 12, 0))
+		for f in 4:
+			await physics_frame
+		check(lv.player.ice_count == 0, "quitter la plaque rétablit l'adhérence")
+		root.remove_child(lv)
+		lv.free()
+	# mondes secrets
+	check(not g.secret_unlocked() and g.playable_worlds().size() == 12, "mondes secrets verrouillés au départ")
+	g.achievements["adventure"] = true
+	check(g.secret_unlocked() and g.playable_worlds().size() == 15, "mondes secrets débloqués après l'Aventure")
+	g.reset_run(31)
+	g.run["mode"] = "endless"
+	g.run["stage"] = 14
+	check(g.current_theme() == 14, "le mode infini inclut les mondes secrets")
+	g.run["stage"] = 0
+	for w in [12, 13, 14]:
+		g.reset_run(900 + w)
+		g.run["stages"] = [w]
+		g.run["mode"] = "free"
+		var lvs = load("res://scenes/level.tscn").instantiate()
+		root.add_child(lvs)
+		for f in 15:
+			await physics_frame
+		check(lvs.state == "play" and lvs.platforms.size() > 8, "monde secret %d (%s) se construit" % [w + 1, lvs.data["name"]])
+		root.remove_child(lvs)
+		lvs.free()
+	# étoiles, chapeaux, traînées
+	check(g.total_stars() == 0 and g.current_hat() == "none", "aucune étoile au départ")
+	g.options["hat"] = "crown"
+	check(g.current_hat() == "none", "un chapeau verrouillé n'est pas équipé")
+	g.record_stars(0, 3)
+	g.record_stars(1, 3)
+	g.record_stars(2, 3)
+	check(g.total_stars() == 9 and g.current_hat() == "crown", "9 étoiles : la couronne est débloquée")
+	check(not g.record_stars(0, 2) and g.total_stars() == 9, "les étoiles ne baissent jamais")
+	g.options["trail"] = "sparks"
+	g.reset_run(60)
+	g.run["stages"] = [0]
+	g.run["mode"] = "free"
+	var lv2 = load("res://scenes/level.tscn").instantiate()
+	root.add_child(lv2)
+	for f in 20:
+		await physics_frame
+	check(lv2.player.trail != null and lv2.player.body_root.get_child_count() > 10, "chapeau et traînée créés sur Lumi")
+	for hat in ["beanie", "crown", "tophat", "viking", "halo", "devil"]:
+		g.stats["coins"] = 0
+		g.world_stars = {0: 3, 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3, 7: 3, 8: 3, 9: 3, 10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3, 19: 3}
+		g.options["hat"] = hat
+		var test_player = load("res://scripts/player.gd").new()
+		root.add_child(test_player)
+		await physics_frame
+		test_player.queue_free()
+	check(true, "les 6 chapeaux se construisent")
+	# victoire : étoiles et succès « À la mode »
+	var stars_before: int = g.total_stars()
+	lv2._win()
+	check(lv2.state == "won" and g.achievements.has("stylish") and g.world_stars[0] == 3, "victoire : 3 étoiles (sans chute, pas de pièces manquantes) et succès « À la mode »")
+	root.remove_child(lv2)
+	lv2.free()
+	g.options["hat"] = "none"
+	g.options["trail"] = "none"
+	g.world_stars = {}
+	# nouveaux modificateurs
+	g.mods["night"] = true
+	g.mods["nocp"] = true
+	g.mods["tiny"] = true
+	g.reset_run(61)
+	g.run["stages"] = [3]
+	g.run["mode"] = "free"
+	var lv3 = load("res://scenes/level.tscn").instantiate()
+	root.add_child(lv3)
+	for f in 20:
+		await physics_frame
+	var cap: CapsuleShape3D = null
+	for c in lv3.player.get_children():
+		if c is CollisionShape3D:
+			cap = c.shape
+	check(cap != null and cap.radius < 0.3 and lv3.player.model_base < 0.7, "Lumi miniature : hitbox et modèle réduits")
+	var lamp := false
+	for c in lv3.player.get_children():
+		if c is OmniLight3D:
+			lamp = true
+	check(lamp, "Nuit noire : Lumi porte une lampe")
+	var cp0: Vector3 = lv3.checkpoint
+	lv3.set_checkpoint(Vector3(5, 5, 5))
+	check(lv3.checkpoint == cp0, "Sans checkpoint : le point de réapparition ne change pas")
+	var mult_before: float = g.multiplier()
+	check(mult_before > 1.0, "multiplicateur de score avec les 3 modificateurs : x%.2f" % mult_before)
+	root.remove_child(lv3)
+	lv3.free()
+	g.reset_mods(false)
+	# astuces
+	g.seen_tips = {}
+	g.options["tips"] = true
+	g.reset_run(62)
+	g.run["stages"] = [10]
+	g.run["mode"] = "free"
+	var lv4 = load("res://scenes/level.tscn").instantiate()
+	root.add_child(lv4)
+	await physics_frame
+	check(g.seen_tips.size() >= 1 and g.seen_tips.size() <= 2, "astuces affichées pour les nouveaux pièges (%d)" % g.seen_tips.size())
+	root.remove_child(lv4)
+	lv4.free()
+	var n_before: int = g.seen_tips.size()
+	var lv5 = load("res://scenes/level.tscn").instantiate()
+	root.add_child(lv5)
+	await physics_frame
+	check(g.seen_tips.size() >= n_before, "une astuce déjà vue n'est pas répétée")
+	root.remove_child(lv5)
+	lv5.free()
+	# rayon du boss final
+	g.reset_run(63)
+	g.run["stages"] = [14]
+	g.run["mode"] = "free"
+	var lvb = load("res://scenes/level.tscn").instantiate()
+	root.add_child(lvb)
+	await physics_frame
+	check(lvb.boss != null and lvb.boss.variant == 4, "le boss du monde 15 est la variante 5")
+	var before: int = lvb.get_child_count()
+	lvb.boss._beam(0.5)
+	check(lvb.get_child_count() == before + 1, "le boss lance un rayon rotatif")
+	root.remove_child(lvb)
+	lvb.free()
+	# série de défis du jour
+	g.reset_stats()
+	var today := int(Time.get_unix_time_from_system() / 86400.0)
+	g.stats["streak"] = 2
+	g.stats["last_day"] = today - 1
+	g.start_challenge("daily")
+	await process_frame
+	g.run["objective"] = {"type": "coins", "value": 0}
+	g.run["stages"] = [0]
+	g.challenges_done = {}
+	var coins0: int = g.stats["coins"]
+	g.stage_cleared({"time": 20.0, "score": 100, "coins": 0, "deaths": 0})
+	await process_frame
+	await process_frame
+	check(int(g.stats["streak"]) == 3 and int(g.stats["coins"]) > coins0 + 30 and g.achievements.has("streak_3"), "série de 3 jours : bonus de pièces et succès « Assidu »")
+	g.restore_mods()
+	# égalisation des effets sonores fournis
+	check(g.sfx_gain.size() >= 10 and g.sounds["coin"].get_length() < 0.9, "effets sonores fournis : gain calculé et silence final retiré")
+	g.reset_stats()
+	g.reset_mods(false)

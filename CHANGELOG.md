@@ -1,5 +1,29 @@
 # Changelog
 
+## 3.2.0
+
+### Nouveau
+- **3 mondes secrets** (13 à 15), débloqués en terminant l'Aventure : Abysses Lumineuses, Pays des Sucreries, Forteresse de l'Ombre (avec décors, musique de synthèse, particules et chapitre d'histoire). Jouables en Monde libre et inclus dans le Mode infini. 15 mondes au total.
+- **5 boss différents** (mondes 3, 6, 9, 12 et 15) : chaque boss a sa couleur, son jeu d'attaques et son rythme ; nouvelle attaque, le **rayon rotatif** ; musique de combat optionnelle (`audio/music/boss`).
+- **2 nouveaux types de dalles** (18 au total) : **bumper** (repousse Lumi) et **plaque de glace** (sol glissant partout).
+- **Étoiles** (jusqu'à 3 par étape : finir, toutes les pièces, aucune chute), conservées par monde et affichées dans le Monde libre.
+- **Chapeaux** (6) et **traînées** de particules (5) pour Lumi, débloqués avec les étoiles, en plus des 8 couleurs (pièces).
+- **3 nouveaux modificateurs** : Nuit noire (lampe de Lumi), Sans checkpoint, Lumi miniature.
+- **Astuces** : la première fois qu'un type de dalle apparaît, une astuce l'explique (désactivable).
+- **Série de défis du jour** : bonus de pièces par jour consécutif, succès « Assidu ».
+- **9 nouveaux succès** (29 au total) et nouvelles statistiques (étoiles, bumpers, portails, boss vaincus distincts).
+- **4 nouvelles langues** : espagnol, allemand, italien, portugais (Brésil), soit 6 langues avec le français et l'anglais ; langue automatique selon le système.
+- **Audio prêt pour tes propres fichiers** : chargeur qui accepte `.ogg`, `.wav`, `.mp3` et les doubles extensions, **suppression du silence de fin** et **égalisation automatique** du volume des effets fournis, musiques de monde / menu / histoire / boss / jingles par fichier, 8 nouveaux sons de synthèse (`bumper`, `star`, `boss_wake`, `boss_shot`, `boss_beam`, `equip`, `streak`, `tip`) et tous les sons existants raccordés (`hit`, `launch`, `cannon`, `portal`…).
+- Outil `tools/check_audio.gd` et `audio/README.md` complet (noms, durées, caractère de chaque piste et effet attendus).
+
+### Corrigé / ajusté
+- Les fichiers audio à double extension (`jump.ogg.wav`) et l'orthographe `loose` sont reconnus ; les jingles ne bouclent plus.
+- Le bumper a une zone d'action plus petite pour laisser des couloirs pour le contourner.
+
+### Vérifié
+- `tests/smoke.gd` : 230 vérifications, dont les 15 mondes avec tous les modificateurs, chaque nouveau piège, les 5 variantes de boss, la complétude des 6 langues et les 11 pages de menu dans chaque langue.
+- Le robot de test joue les 15 mondes (environ 83 % de parcours réussis ; ses échecs viennent surtout des bumpers, des plaques de glace et des canons, qu'il gère mal : ces pièges restent à valider à la main).
+
 ## 3.1.0
 
 ### Nouveau

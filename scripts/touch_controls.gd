@@ -59,7 +59,7 @@ func _draw_ui() -> void:
 	var pressed := _jump_idx != -1
 	_ctl.draw_circle(jc, _jump_radius(), Color(1, 1, 1, 0.32 if pressed else 0.16))
 	_ctl.draw_arc(jc, _jump_radius(), 0.0, TAU, 48, Color(1, 1, 1, 0.55), 3.0)
-	_ctl.draw_string(ThemeDB.fallback_font, jc + Vector2(-34, 9) * _scale, "SAUT", HORIZONTAL_ALIGNMENT_CENTER, 68 * _scale, int(22 * _scale), Color(1, 1, 1, 0.85))
+	_ctl.draw_string(ThemeDB.fallback_font, jc + Vector2(-34, 9) * _scale, tr("SAUT"), HORIZONTAL_ALIGNMENT_CENTER, 68 * _scale, int(22 * _scale), Color(1, 1, 1, 0.85))
 
 	var pc := _pause_center()
 	_ctl.draw_circle(pc, 30.0, Color(0, 0, 0, 0.35))

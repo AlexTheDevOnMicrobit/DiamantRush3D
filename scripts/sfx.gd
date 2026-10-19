@@ -71,6 +71,14 @@ static func build_all() -> Dictionary:
 	d["portal"] = _make(_cat([_tone(400, 900, 0.15, 0.3, 0), _tone(900, 300, 0.2, 0.3, 0)]))
 	d["launch"] = _make(_tone(250, 900, 0.25, 0.4, 2))
 	d["cannon"] = _make(_cat([_tone(0, 0, 0.05, 0.4, 3), _tone(140, 70, 0.18, 0.5, 0)]))
+	d["bumper"] = _make(_cat([_tone(300, 700, 0.06, 0.4, 1), _tone(700, 260, 0.14, 0.4, 0)]))
+	d["star"] = _make(_cat([_tone(880, 880, 0.08, 0.3, 0), _tone(1175, 1175, 0.08, 0.3, 0), _tone(1568, 1568, 0.25, 0.3, 0)]))
+	d["boss_wake"] = _make(_cat([_tone(110, 70, 0.5, 0.5, 2), _tone(70, 50, 0.6, 0.5, 2)]))
+	d["boss_shot"] = _make(_cat([_tone(0, 0, 0.04, 0.35, 3), _tone(520, 180, 0.2, 0.35, 1)]))
+	d["boss_beam"] = _make(_tone(200, 600, 0.9, 0.35, 1))
+	d["equip"] = _make(_cat([_tone(660, 660, 0.06, 0.3, 2), _tone(990, 990, 0.12, 0.3, 2)]))
+	d["streak"] = _make(_cat([_tone(523, 523, 0.08, 0.3, 2), _tone(659, 659, 0.08, 0.3, 2), _tone(784, 784, 0.08, 0.3, 2), _tone(1047, 1047, 0.3, 0.3, 2)]))
+	d["tip"] = _make(_cat([_tone(1000, 1000, 0.05, 0.25, 0), _tone(1400, 1400, 0.1, 0.25, 0)]))
 	d["run_complete"] = _make(_cat([
 		_tone(523, 523, 0.14, 0.3, 2), _tone(659, 659, 0.14, 0.3, 2), _tone(784, 784, 0.14, 0.3, 2),
 		_tone(1047, 1047, 0.14, 0.3, 2), _tone(784, 784, 0.14, 0.3, 2), _tone(1047, 1047, 0.14, 0.3, 2),
@@ -84,9 +92,9 @@ static func music(theme: int) -> AudioStreamWAV:
 	var scales := [
 		[0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 2, 3, 7, 8], [0, 1, 5, 7, 8], [0, 2, 7, 9, 12], [0, 4, 7, 11, 14],
 	]
-	var roots: Array[float] = [196.0, 174.6, 220.0, 207.7, 164.8, 174.6, 130.8, 196.0, 146.8, 146.8, 185.0, 233.1]
-	var tempo: Array[float] = [0.16, 0.2, 0.17, 0.15, 0.22, 0.18, 0.13, 0.19, 0.24, 0.14, 0.12, 0.22]
-	var theme_i := clampi(theme, 0, 11)
+	var roots: Array[float] = [196.0, 174.6, 220.0, 207.7, 164.8, 174.6, 130.8, 196.0, 146.8, 146.8, 185.0, 233.1, 138.6, 261.6, 123.5]
+	var tempo: Array[float] = [0.16, 0.2, 0.17, 0.15, 0.22, 0.18, 0.13, 0.19, 0.24, 0.14, 0.12, 0.22, 0.21, 0.15, 0.13]
+	var theme_i := clampi(theme, 0, 14)
 	var step: float = tempo[theme_i]
 	var scale: Array = scales[theme_i % scales.size()]
 	var root: float = roots[theme_i]

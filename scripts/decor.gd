@@ -145,6 +145,36 @@ static func prop(theme_idx: int, rng: RandomNumberGenerator) -> Node3D:
 			var neon: Color = Color(1.0, 0.2, 0.8) if alt else Color(0.1, 0.9, 1.0)
 			n.add_child(_at(_mi(_box(0.14, 1.1, 0.14), neon, 3.0), Vector3(0, 0.55, 0)))
 			n.add_child(_at(_mi(_box(0.4, 0.06, 0.4), neon, 2.0), Vector3(0, 0.03, 0)))
+		12:
+			if alt:
+				n.add_child(_at(_mi(_cyl(0.02, 0.03, 0.9, 4), Color(0.2, 0.5, 0.6)), Vector3(0, 0.45, 0)))
+				var jelly := _mi(_sphere(0.35, 8), Color(0.5, 1.0, 0.9, 1.0), 2.5)
+				jelly.scale = Vector3(1.0, 0.7, 1.0)
+				n.add_child(_at(jelly, Vector3(0, 1.0, 0)))
+			else:
+				for k in 3:
+					var anemone := _mi(_cyl(0.02, 0.06, 0.6 + k * 0.15, 4), Color(1.0, 0.4, 0.8), 1.5)
+					n.add_child(_at(anemone, Vector3(k * 0.18 - 0.18, 0.3, 0)))
+		13:
+			if alt:
+				n.add_child(_at(_mi(_cyl(0.04, 0.04, 0.9, 6), Color(1, 1, 1)), Vector3(0, 0.45, 0)))
+				var lolli := _mi(_cyl(0.4, 0.4, 0.08, 14), Color.from_hsv(rng.randf(), 0.6, 1.0), 0.4)
+				lolli.rotation_degrees.x = 90.0
+				n.add_child(_at(lolli, Vector3(0, 1.05, 0)))
+			else:
+				n.add_child(_at(_mi(_cyl(0.32, 0.25, 0.35, 10), Color(0.9, 0.7, 0.5)), Vector3(0, 0.18, 0)))
+				var cream := _mi(_sphere(0.34, 8), Color(1.0, 0.7, 0.85))
+				cream.scale = Vector3(1.0, 0.8, 1.0)
+				n.add_child(_at(cream, Vector3(0, 0.5, 0)))
+				n.add_child(_at(_mi(_sphere(0.09, 6), Color(0.9, 0.1, 0.2), 0.5), Vector3(0, 0.82, 0)))
+		14:
+			if alt:
+				var obelisk := _mi(_cyl(0.1, 0.3, 1.4, 4), Color(0.12, 0.08, 0.18))
+				n.add_child(_at(obelisk, Vector3(0, 0.7, 0)))
+				n.add_child(_at(_mi(_sphere(0.14, 6), Color(1.0, 0.15, 0.2), 3.0), Vector3(0, 1.5, 0)))
+			else:
+				n.add_child(_at(_mi(_cyl(0.06, 0.08, 0.9, 5), Color(0.2, 0.15, 0.25)), Vector3(0, 0.45, 0)))
+				n.add_child(_at(_mi(_sphere(0.16, 6), Color(1.0, 0.5, 0.1), 3.0), Vector3(0, 1.0, 0)))
 		_:
 			n.add_child(_at(_mi(_cyl(0.03, 0.05, 0.9, 5), Color(0.7, 0.8, 1.0)), Vector3(0, 0.45, 0)))
 			n.add_child(_at(_mi(_sphere(0.12, 6), Color(0.6, 0.9, 1.0), 2.5), Vector3(0, 0.95, 0)))
@@ -323,6 +353,47 @@ static func scenery(parent: Node3D, theme_idx: int, center: Vector3, extent: Vec
 				strip.scale = Vector3(tww + 0.3, 0.4, tww + 0.3)
 				strip.position = Vector3(qc.x, min_y - 30.0 + th * rng.randf_range(0.4, 0.95), qc.z)
 				parent.add_child(strip)
+		12:
+			_plane(parent, Vector2(1400, 1400), Color(0.02, 0.2, 0.35), 0.5, Vector3(center.x, min_y - 32.0, center.z))
+			for i in int(30 * qf):
+				var jf := _mi(_sphere(rng.randf_range(1.5, 4.0), 8), Color(0.5, 1.0, 0.9), 2.0)
+				jf.scale = Vector3(1.0, 0.7, 1.0)
+				var qd: Vector3 = rnd.call(span)
+				jf.position = Vector3(qd.x, center.y + rng.randf_range(-35.0, 30.0), qd.z)
+				if _too_close(jf.position, obstacles, 8.0):
+					jf.free()
+					continue
+				parent.add_child(jf)
+		13:
+			for i in int(16 * qf) + 2:
+				var cloud := _mi(_sphere(1.0, 8), Color(1.0, 0.8, 0.92), 0.4)
+				cloud.scale = Vector3(rng.randf_range(6, 14), rng.randf_range(1.5, 3), rng.randf_range(4, 8))
+				var qe: Vector3 = rnd.call(span)
+				cloud.position = Vector3(qe.x, center.y + rng.randf_range(15.0, 45.0), qe.z)
+				parent.add_child(cloud)
+			for i in int(14 * qf) + 2:
+				var stick := _mi(_cyl(0.6, 0.6, 1.0, 6), Color(1, 1, 1))
+				var hs := rng.randf_range(14.0, 34.0)
+				stick.scale = Vector3(1.0, hs, 1.0)
+				var qf2: Vector3 = rnd.call(span)
+				stick.position = Vector3(qf2.x, center.y - 45.0 + hs * 0.5, qf2.z)
+				parent.add_child(stick)
+				var disc := _mi(_cyl(5.0, 5.0, 0.8, 14), Color.from_hsv(rng.randf(), 0.55, 1.0), 0.3)
+				disc.position = stick.position + Vector3(0, hs * 0.5, 0)
+				disc.rotation_degrees.x = rng.randf_range(-25.0, 25.0)
+				parent.add_child(disc)
+		14:
+			for i in int(26 * qf):
+				var tw2 := _mi(_cyl(1.0, 1.4, 1.0, 5), Color(0.1, 0.06, 0.16))
+				var ht := rng.randf_range(25.0, 70.0)
+				tw2.scale = Vector3(rng.randf_range(2.0, 5.0), ht, rng.randf_range(2.0, 5.0))
+				var qg: Vector3 = rnd.call(span)
+				tw2.position = Vector3(qg.x, min_y - 30.0 + ht * 0.5, qg.z)
+				parent.add_child(tw2)
+				var eye := _mi(_sphere(0.8, 6), Color(1.0, 0.1, 0.2), 3.0)
+				eye.position = tw2.position + Vector3(0, ht * rng.randf_range(0.2, 0.5), 0)
+				parent.add_child(eye)
+			_sun(parent, center, Color(0.9, 0.1, 0.25), 18.0)
 		_:
 			for i in int(220 * qf):
 				var d := Vector3(rng.randf_range(-1, 1), rng.randf_range(-0.6, 1), rng.randf_range(-1, 1)).normalized()

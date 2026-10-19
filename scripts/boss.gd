@@ -3,6 +3,8 @@ extends Node3D
 ##   - Balayage : une rangée de boules traverse l'arène (à sauter)
 ##   - Météores : un cercle rouge au sol, puis l'impact
 ##   - Tir ciblé : une boule qui vise Lumi
+##   - Rayon : une barre rotative rouge à sauter (boss 4 et 5, et en seconde phase du boss 3)
+## Cinq variantes (une par monde à boss) : couleur, attaques et rythme changent.
 
 signal defeated
 signal progress(ratio: float)
@@ -12,6 +14,8 @@ const Projectile = preload("res://scripts/projectile.gd")
 const Fx = preload("res://scripts/fx.gd")
 
 var player: Node3D
+var variant := 0               # 0 à 4 (mondes 3, 6, 9, 12 et 15)
+var world_theme := 0
 var center := Vector3.ZERO     # centre du dessus de l'arène
 var half := 11.0               # demi-côté de l'arène
 var difficulty := 5.0
@@ -26,12 +30,14 @@ var _body: Node3D
 var _bob := 0.0
 
 
-func setup(p: Node3D, arena_center: Vector3, arena_half: float, diff: float) -> void:
+func setup(p: Node3D, arena_center: Vector3, arena_half: float, diff: float, boss_variant: int = 0, theme_idx: int = 0) -> void:
 	player = p
+	variant = clampi(boss_variant, 0, 4)
+	world_theme = theme_idx
 	center = arena_center
 	half = arena_half
 	difficulty = diff
-	duration = 26.0 + diff * 2.2
+	duration = 26.0 + diff * 2.2 + float(variant) * 2.0
 	position = center + Vector3(0, 9.5, 0)
 	_build()
 
@@ -46,7 +52,8 @@ func _build() -> void:
 	sm.radial_segments = 14
 	sm.rings = 7
 	core.mesh = sm
-	core.material_override = Models.material(Color(0.12, 0.05, 0.2), 0.3, 0.4, 0.4)
+	var body_cols := [Color(0.12, 0.05, 0.2), Color(0.05, 0.1, 0.25), Color(0.05, 0.2, 0.12), Color(0.25, 0.04, 0.04), Color(0.03, 0.03, 0.05)]
+	core.material_override = Models.material(body_cols[variant], 0.3, 0.4, 0.4)
 	_body.add_child(core)
 	for i in 8:
 		var spike := MeshInstance3D.new()
@@ -66,7 +73,8 @@ func _build() -> void:
 	em.radius = 0.8
 	em.height = 1.6
 	eye.mesh = em
-	_eye_mat = Models.material(Color(1.0, 0.1, 0.1), 2.0)
+	var eye_cols := [Color(1.0, 0.1, 0.1), Color(0.3, 0.8, 1.0), Color(0.6, 1.0, 0.2), Color(1.0, 0.6, 0.1), Color(1.0, 0.0, 0.3)]
+	_eye_mat = Models.material(eye_cols[variant], 2.0)
 	eye.material_override = _eye_mat
 	eye.position = Vector3(0, 0.2, 1.9)
 	_body.add_child(eye)
@@ -83,7 +91,8 @@ func start() -> void:
 	active = true
 	elapsed = 0.0
 	_cd = 2.0
-	Global.play_sfx("lose", 0.6, -4.0)
+	Global.play_sfx("boss_wake")
+	Global.play_boss_music()
 
 
 ## Appelé quand Lumi est battu ou tombe : l'Ombre repart de zéro.
@@ -122,12 +131,22 @@ func _physics_process(delta: float) -> void:
 func _attack(ratio: float) -> void:
 	_eye_mat.emission_energy_multiplier = 6.0
 	get_tree().create_timer(0.25).timeout.connect(func(): _eye_mat.emission_energy_multiplier = 2.0)
-	var roll := randi() % 3
+	var pool: Array = []
+	match variant:
+		0: pool = [0, 2]
+		1: pool = [1, 2]
+		2: pool = [0, 1, 2] + ([3] if ratio >= 0.5 else [])
+		3: pool = [0, 1, 2, 3]
+		_: pool = [0, 1, 2, 3, 3]
 	if ratio < 0.2:
-		roll = randi() % 2 + 1 # début : pas de balayage trop dur
+		pool = pool.filter(func(a): return a != 0 and a != 3) # début de combat plus doux
+		if pool.is_empty():
+			pool = [2]
+	var roll: int = pool[randi() % pool.size()]
 	match roll:
 		0: _sweep(ratio)
 		1: _meteors(ratio)
+		3: _beam(ratio)
 		_: _aimed()
 
 
@@ -162,7 +181,7 @@ func _sweep(ratio: float) -> void:
 		shot.velocity = v
 		shot.life = (half * 2.0 + 1.5) / speed
 		get_parent().add_child(shot)
-	Global.play_sfx("crumble", 0.8, -4.0)
+	Global.play_sfx("boss_shot")
 
 
 func _meteors(ratio: float) -> void:
@@ -218,7 +237,54 @@ func _aimed() -> void:
 	shot.velocity = (target - shot.position).normalized() * (7.5 + difficulty * 0.2)
 	shot.life = 4.0
 	get_parent().add_child(shot)
-	Global.play_sfx("crumble", 1.3, -4.0)
+	Global.play_sfx("boss_shot", 1.2)
+
+
+func _beam(ratio: float) -> void:
+	var holder := Node3D.new()
+	holder.position = center + Vector3(0, 0.0, 0)
+	holder.add_to_group("boss_fx")
+	var area := Area3D.new()
+	area.collision_layer = 0
+	area.collision_mask = 2
+	var cs := CollisionShape3D.new()
+	var sh := BoxShape3D.new()
+	sh.size = Vector3(half * 2.0, 0.8, 0.55)
+	cs.shape = sh
+	cs.position.y = 0.55
+	area.add_child(cs)
+	area.monitoring = false
+	holder.add_child(area)
+	var mesh := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(half * 2.0, 0.5, 0.35)
+	mesh.mesh = bm
+	var mat := Models.material(Color(1.0, 0.1, 0.2, 0.3), 1.2)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mesh.material_override = mat
+	mesh.position.y = 0.55
+	holder.add_child(mesh)
+	get_parent().add_child(holder)
+	holder.rotation.y = randf() * TAU
+	Global.play_sfx("boss_beam")
+	var speed := (0.9 + float(variant) * 0.08 + ratio * 0.3) * (1.0 if randf() < 0.5 else -1.0)
+	area.body_entered.connect(_on_beam_hit.bind(holder))
+	var tw := create_tween()
+	tw.bind_node(holder)
+	tw.tween_interval(1.0) # avertissement : la barre est transparente
+	tw.tween_callback(func():
+		if is_instance_valid(area):
+			area.monitoring = true
+			mat.albedo_color.a = 1.0
+			mat.emission_energy_multiplier = 2.5)
+	tw.tween_property(holder, "rotation:y", holder.rotation.y + speed * 4.5, 4.5)
+	tw.tween_callback(holder.queue_free)
+
+
+func _on_beam_hit(body, holder: Node3D) -> void:
+	if body.is_in_group("player") and active and not finished and is_instance_valid(holder):
+		var dir := Vector3(sin(holder.rotation.y), 0, cos(holder.rotation.y))
+		body.get_hit(body.global_position - dir.cross(Vector3.UP) * 1.0, 8.0)
 
 
 func _defeat() -> void:
@@ -229,6 +295,7 @@ func _defeat() -> void:
 			n.queue_free()
 	Fx.burst(get_parent(), global_position, Color(0.8, 0.3, 1.0), 60, 10.0, false)
 	Global.play_sfx("win", 0.8)
+	Global.resume_world_music(world_theme)
 	var tw := create_tween()
 	tw.tween_property(self, "scale", Vector3.ZERO, 1.2)
 	tw.tween_callback(func(): visible = false)

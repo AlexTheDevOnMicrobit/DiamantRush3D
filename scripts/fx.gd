@@ -67,6 +67,9 @@ static func ambient(parent: Node3D, theme_idx: int, color: Color, quality: int =
 		Vector3(0.0, 1.4, 0.0),     # 9 braises
 		Vector3(0.0, -0.6, 0.0),    # 10 pluie néon
 		Vector3.ZERO,               # 11 poussière d'étoiles
+		Vector3(0.0, 0.7, 0.0),     # 12 bulles lumineuses
+		Vector3(0.3, -0.8, 0.1),    # 13 confettis
+		Vector3(0.0, 0.9, 0.0),     # 14 braises rouges
 	]
 	p.gravity = grav[clampi(theme_idx, 0, grav.size() - 1)]
 	parent.add_child(p)

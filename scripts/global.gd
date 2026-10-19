@@ -2,7 +2,7 @@ extends Node
 ## Autoload : run en cours, modes, progression, sauvegarde, options, modificateurs,
 ## succès, apparences, défis, codes de partage, fantômes, classement, audio.
 
-const VERSION := "3.1.0"
+const VERSION := "3.2.0"
 const REPO := "AlexTheDevOnMicrobit/DiamantRush3D"
 const SAVE_PATH := "user://save.cfg"
 const GHOST_PATH := "user://ghosts.dat"
@@ -36,6 +36,9 @@ const TOGGLES := [
 	["lava", "Lave qui monte", 1.5],
 	["fog", "Brouillard épais", 1.15],
 	["invert", "Commandes inversées", 1.3],
+	["night", "Nuit noire (lampe de Lumi)", 1.3],
+	["nocp", "Sans checkpoint", 1.5],
+	["tiny", "Lumi miniature", 0.9],
 ]
 
 ## Apparences de Lumi : débloquées avec le total de pièces ramassées
@@ -48,6 +51,25 @@ const SKINS := [
 	{"id": "gold", "name": "Or", "color": Color(1.0, 0.82, 0.2), "cost": 320},
 	{"id": "dark", "name": "Ombre", "color": Color(0.15, 0.15, 0.22), "cost": 450},
 	{"id": "rainbow", "name": "Arc-en-ciel", "color": Color(1, 1, 1), "cost": 600},
+]
+
+## Chapeaux et traînées de Lumi : débloqués avec le nombre total d'étoiles
+const HATS := [
+	{"id": "none", "name": "Aucun", "stars": 0},
+	{"id": "beanie", "name": "Bonnet", "stars": 3},
+	{"id": "crown", "name": "Couronne", "stars": 8},
+	{"id": "tophat", "name": "Haut-de-forme", "stars": 15},
+	{"id": "viking", "name": "Casque à cornes", "stars": 25},
+	{"id": "halo", "name": "Halo", "stars": 40},
+	{"id": "devil", "name": "Cornes de diable", "stars": 60},
+]
+const TRAILS := [
+	{"id": "none", "name": "Aucune", "stars": 0},
+	{"id": "sparks", "name": "Étincelles", "stars": 5},
+	{"id": "flames", "name": "Flammes", "stars": 12},
+	{"id": "rainbow", "name": "Arc-en-ciel", "stars": 20},
+	{"id": "stars", "name": "Étoiles", "stars": 35},
+	{"id": "smoke", "name": "Fumée", "stars": 50},
 ]
 
 ## Touches remappables : action, libellé
@@ -63,6 +85,7 @@ const DEFAULT_KEYS := {
 const MUSIC_FILES := [
 	"world_01_prairies", "world_02_foret", "world_03_dunes", "world_04_recif", "world_05_toundra", "world_06_cristaux",
 	"world_07_usine", "world_08_ruines", "world_09_marais", "world_10_volcan", "world_11_neon", "world_12_ciel",
+	"world_13_abysses", "world_14_sucreries", "world_15_forteresse",
 ]
 
 var run: Dictionary = {}
@@ -73,6 +96,8 @@ var stats: Dictionary = {}
 var achievements: Dictionary = {}
 var leaderboard: Dictionary = {}
 var challenges_done: Dictionary = {}
+var world_stars: Dictionary = {}   # monde -> meilleur nombre d'étoiles (0 à 3)
+var seen_tips: Dictionary = {}     # type de dalle déjà expliqué
 var toasts: Array = [] # succès à annoncer en jeu
 
 var mods: Dictionary = {}
@@ -80,6 +105,7 @@ var mods_backup: Dictionary = {}
 var options: Dictionary = {}
 
 var sounds: Dictionary = {}
+var sfx_gain: Dictionary = {}   # gain (dB) calculé pour égaliser les fichiers fournis
 var _sfx_players: Array[AudioStreamPlayer] = []
 var _music_player: AudioStreamPlayer
 var _jingle_player: AudioStreamPlayer
@@ -185,13 +211,16 @@ func reset_options() -> void:
 		"skin": "orange",
 		"assist": false, "symbols": false, "colorblind": false,
 		"text_scale": 1.0, "ghost": true, "updates": true,
-		"language": "auto", "keymap": {},
+		"language": "auto", "keymap": {}, "hat": "none", "trail": "none", "tips": true,
 	}
 
 
 func reset_stats() -> void:
 	records = {}
-	stats = {"coins": 0, "jumps": 0, "falls": 0, "stages": 0, "runs": 0, "playtime": 0.0, "worlds": [], "bosses": 0, "endless_best": 0}
+	stats = {"coins": 0, "jumps": 0, "falls": 0, "stages": 0, "runs": 0, "playtime": 0.0, "worlds": [], "bosses": 0, "endless_best": 0,
+		"bumps": 0, "portals": 0, "bosses_done": [], "streak": 0, "last_day": 0}
+	world_stars = {}
+	seen_tips = {}
 	achievements = {}
 	leaderboard = {"all": [], "endless": []}
 	challenges_done = {}
@@ -241,6 +270,49 @@ func safe_margins() -> Dictionary:
 	m["right"] = int(maxf(float(win.x) - float(safe.end.x), 0.0) * sx)
 	m["bottom"] = int(maxf(float(win.y) - float(safe.end.y), 0.0) * sy)
 	return m
+
+
+# ---------------------------------------------------------------- étoiles, mondes secrets, cosmétiques
+
+func total_stars() -> int:
+	var n := 0
+	for k in world_stars:
+		n += int(world_stars[k])
+	return n
+
+
+func record_stars(world: int, stars: int) -> bool:
+	if stars > int(world_stars.get(world, 0)):
+		world_stars[world] = stars
+		return true
+	return false
+
+
+func secret_unlocked() -> bool:
+	return achievements.has("adventure")
+
+
+## Mondes utilisables en mode infini : les 12 de l'Aventure, plus les secrets une fois débloqués.
+func playable_worlds() -> Array:
+	return range(LevelData.WORLD_COUNT if secret_unlocked() else LevelData.ADVENTURE_COUNT)
+
+
+func hat_unlocked(h: Dictionary) -> bool:
+	return total_stars() >= int(h["stars"])
+
+
+func current_hat() -> String:
+	for h in HATS:
+		if h["id"] == options["hat"] and hat_unlocked(h):
+			return String(h["id"])
+	return "none"
+
+
+func current_trail() -> String:
+	for t in TRAILS:
+		if t["id"] == options["trail"] and hat_unlocked(t):
+			return String(t["id"])
+	return "none"
 
 
 # ---------------------------------------------------------------- apparences
@@ -300,7 +372,8 @@ func is_endless() -> bool:
 ## Monde de l'étape courante (le mode infini fait tourner les 12 mondes).
 func current_theme() -> int:
 	if is_endless():
-		return int(run["stage"]) % LevelData.WORLD_COUNT
+		var pw := playable_worlds()
+		return int(pw[int(run["stage"]) % pw.size()])
 	var st: Array = run["stages"]
 	return int(st[clampi(int(run["stage"]), 0, st.size() - 1)])
 
@@ -315,7 +388,7 @@ func stage_total() -> int:
 func generation_extra() -> Dictionary:
 	if is_endless():
 		var st := int(run["stage"])
-		return {"diff_bonus": float(st / LevelData.WORLD_COUNT) * 1.5 + float(st % LevelData.WORLD_COUNT) * 0.0,
+		return {"diff_bonus": float(st / playable_worlds().size()) * 1.5,
 			"allow_boss": false, "count_mult": minf(0.55 + float(st) * 0.02, 0.9)}
 	return {}
 
@@ -332,7 +405,7 @@ func start_run(seed_value: int, mode: String = "adventure", worlds: Array = [], 
 		"endless":
 			run["stages"] = [0]
 			run["lives"] = ENDLESS_LIVES
-		_: run["stages"] = range(LevelData.WORLD_COUNT)
+		_: run["stages"] = range(LevelData.ADVENTURE_COUNT)
 	if mode == "free" or mode == "endless":
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/level.tscn")
@@ -439,6 +512,19 @@ func _finish_run() -> void:
 				achievements["challenge"] = true
 				got.append("challenge")
 			challenge_text = tr("Défi réussi ! +%d pièces") % int(run["reward"])
+			if String(run["challenge_kind"]) == "daily":
+				var today := int(Time.get_unix_time_from_system() / 86400.0)
+				var last := int(stats["last_day"])
+				stats["streak"] = (int(stats["streak"]) + 1) if last == today - 1 else (int(stats["streak"]) if last == today else 1)
+				stats["last_day"] = today
+				var bonus_c := mini(int(stats["streak"]), 10) * 5
+				if int(stats["streak"]) > 1:
+					play_sfx("streak")
+					stats["coins"] = int(stats["coins"]) + bonus_c
+					challenge_text += "  " + tr("Série de %d jours : +%d pièces") % [int(stats["streak"]), bonus_c]
+				if int(stats["streak"]) >= 3 and not achievements.has("streak_3"):
+					achievements["streak_3"] = true
+					got.append("streak_3")
 		elif ok:
 			challenge_text = tr("Défi déjà réussi.")
 		else:
@@ -466,6 +552,8 @@ func _finish_run() -> void:
 		text += "\n" + tr("Classement local : n°%d") % rank
 	if challenge_text != "":
 		text += "\n" + challenge_text
+	if got.has("adventure"):
+		text += "\n" + tr("Mondes secrets débloqués dans le Monde libre et le Mode infini !")
 	if not got.is_empty():
 		var names: Array[String] = []
 		for id in got:
@@ -668,6 +756,8 @@ func save_game() -> void:
 	cfg.set_value("progress", "achievements", achievements)
 	cfg.set_value("progress", "leaderboard", leaderboard)
 	cfg.set_value("progress", "challenges_done", challenges_done)
+	cfg.set_value("progress", "world_stars", world_stars)
+	cfg.set_value("progress", "seen_tips", seen_tips)
 	cfg.set_value("mods", "all", mods_backup if not mods_backup.is_empty() else mods)
 	cfg.set_value("options", "all", options)
 	cfg.save(SAVE_PATH)
@@ -690,6 +780,8 @@ func load_game() -> void:
 		if leaderboard.has(k):
 			leaderboard[k] = lb[k]
 	challenges_done = cfg.get_value("progress", "challenges_done", {})
+	world_stars = cfg.get_value("progress", "world_stars", {})
+	seen_tips = cfg.get_value("progress", "seen_tips", {})
 	var saved: Dictionary = cfg.get_value("mods", "all", {})
 	for k in saved:
 		if mods.has(k):
@@ -723,6 +815,8 @@ func _setup_audio() -> void:
 		var found := _find_audio("res://audio/sfx/", String(n))
 		if found != "":
 			sounds[n] = load(found)
+			if sounds[n] is AudioStreamWAV:
+				sounds[n] = _prepare_wav(sounds[n] as AudioStreamWAV, String(n))
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -740,9 +834,38 @@ func play_sfx(sfx_name: String, pitch: float = 1.0, db: float = 0.0) -> void:
 		if not p.playing:
 			p.stream = sounds[sfx_name]
 			p.pitch_scale = pitch
-			p.volume_db = db + linear_to_db(maxf(float(options["sfx"]), 0.0001))
+			p.volume_db = db + float(sfx_gain.get(sfx_name, 0.0)) + linear_to_db(maxf(float(options["sfx"]), 0.0001))
 			p.play()
 			return
+
+
+## Prépare un effet sonore WAV 16 bits : retire le silence de fin et mémorise un gain pour égaliser les volumes.
+func _prepare_wav(w: AudioStreamWAV, sfx_name: String) -> AudioStreamWAV:
+	if w.format != AudioStreamWAV.FORMAT_16_BITS or w.data.size() < 4:
+		return w
+	var data := w.data
+	var count := data.size() / 2
+	var peak := 0
+	var i := 0
+	while i < count: # crête estimée (1 échantillon sur 6), suffisant pour égaliser le volume
+		var v := absi(data.decode_s16(i * 2))
+		if v > peak:
+			peak = v
+		i += 6
+	if peak <= 0:
+		return w
+	var last := count - 1
+	while last > 0 and absi(data.decode_s16(last * 2)) < 130: # recherche depuis la fin (environ -48 dB)
+		last -= 1
+	var channels := 2 if w.stereo else 1
+	var keep := mini(count, last + int(0.06 * float(w.mix_rate)) * channels)
+	if keep < count:
+		var copy := w.duplicate() as AudioStreamWAV
+		copy.data = data.slice(0, keep * 2)
+		w = copy
+	var gain := clampf(20.0 * log(0.7 / (float(peak) / 32768.0)) / log(10.0), -12.0, 18.0)
+	sfx_gain[sfx_name] = gain
+	return w
 
 
 ## Cherche un fichier audio par nom : accepte .ogg, .wav, .mp3 et les doubles extensions (jump.ogg.wav),
@@ -817,6 +940,18 @@ func play_jingle(jingle_name: String) -> void:
 		play_sfx(jingle_name)
 
 
+## Musique de combat de boss si le fichier audio/music/boss existe (sinon la musique du monde continue).
+func play_boss_music() -> void:
+	var s := _load_music_file("boss")
+	if s:
+		_play_stream("boss", s)
+
+
+func resume_world_music(theme_idx: int) -> void:
+	_music_key = ""
+	play_music(theme_idx)
+
+
 func stop_music() -> void:
 	_music_key = ""
 	_music_player.stop()
@@ -829,10 +964,18 @@ func _setup_translations() -> void:
 		TranslationServer.add_translation(t)
 
 
+const LANGUAGES := [
+	["auto", "Automatique"], ["fr", "Français"], ["en", "English"], ["es", "Español"],
+	["de", "Deutsch"], ["it", "Italiano"], ["pt", "Português"],
+]
+
+
 func apply_language() -> void:
 	var lang := String(options["language"])
 	if lang == "auto":
-		lang = "fr" if OS.get_locale_language() == "fr" else "en"
+		lang = OS.get_locale_language()
+		if not ["fr", "en", "es", "de", "it", "pt"].has(lang):
+			lang = "en"
 	TranslationServer.set_locale(lang)
 
 

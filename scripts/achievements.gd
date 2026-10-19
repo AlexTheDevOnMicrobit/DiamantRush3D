@@ -22,6 +22,15 @@ const DEFS := [
 	["endless_10", "Infatigable", "Atteins l'étape 10 du mode infini."],
 	["challenge", "Relève le défi", "Réussis un défi du jour ou de la semaine."],
 	["ghost_win", "Plus fort que ton ombre", "Bats ton propre fantôme."],
+	["stars_30", "Étoilé", "Gagne 30 étoiles au total."],
+	["stylish", "À la mode", "Équipe un chapeau ou une traînée."],
+	["secret", "Monde secret", "Termine un monde secret."],
+	["night_owl", "Chouette de nuit", "Termine une étape avec la Nuit noire."],
+	["tiny_hero", "Petit mais costaud", "Termine une étape avec Lumi miniature."],
+	["streak_3", "Assidu", "Réussis le défi du jour 3 jours de suite."],
+	["bumper_20", "Boule de flipper", "Rebondis 20 fois sur des bumpers."],
+	["portal_25", "Voyageur", "Traverse 25 portails."],
+	["boss_all", "Chasseur d'Ombres", "Bats les 5 boss différents."],
 ]
 
 
@@ -47,6 +56,13 @@ static func evaluate_stage(g: Node, info: Dictionary) -> Array:
 	_try(g, got, "power", bool(info["boost"]) and bool(info["wing"]))
 	_try(g, got, "boss", bool(info.get("boss", false)))
 	_try(g, got, "ghost_win", bool(info.get("beat_ghost", false)))
+	_try(g, got, "stars_30", g.total_stars() >= 30)
+	_try(g, got, "secret", bool(info.get("secret", false)))
+	_try(g, got, "night_owl", bool(info.get("night", false)))
+	_try(g, got, "tiny_hero", bool(info.get("tiny", false)))
+	_try(g, got, "bumper_20", int(g.stats.get("bumps", 0)) >= 20)
+	_try(g, got, "portal_25", int(g.stats.get("portals", 0)) >= 25)
+	_try(g, got, "boss_all", (g.stats.get("bosses_done", []) as Array).size() >= 5)
 	_try(g, got, "coins_200", int(g.stats["coins"]) >= 200)
 	_try(g, got, "dandy", g.unlocked_skins().size() >= 4)
 	var worlds: Array = g.stats["worlds"]
