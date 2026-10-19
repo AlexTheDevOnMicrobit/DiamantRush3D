@@ -50,7 +50,7 @@ var touch: CanvasLayer = null
 var boss: Node3D = null
 var arena_top := Vector3.ZERO
 var arena_half := 10.0
-var hearts := MAX_HEARTS
+var hearts := MAX_HEARTS   # (défi des 5 boss : repris de l'étape précédente)
 var boss_beaten := false
 
 # fantôme
@@ -85,6 +85,8 @@ func _ready() -> void:
 	world = Global.current_theme()
 	data = Generator.generate(int(Global.run["seed"]), world, stage, Global.length_factor(), int(Global.mods["difficulty"]), Global.generation_extra())
 	theme = LevelData.get_themes()[world]
+	if Global.run["mode"] == "bossrush":
+		hearts = clampi(int(Global.run["hearts"]), 1, MAX_HEARTS)
 	par = float(data["par"])
 	mirror = Global.mods["mirror"]
 	_setup_viewport()
@@ -322,7 +324,7 @@ func _build_ui() -> void:
 	var left := UI.vbox(2)
 	top.add_child(left)
 	var title := tr("Étape %d/%d — %s") % [stage + 1, Global.stage_total(), tr(data["name"])]
-	if Global.run["mode"] == "free":
+	if Global.is_single():
 		title = tr(data["name"])
 	elif Global.is_endless():
 		title = tr("Étape %d — %s") % [stage + 1, tr(data["name"])]
@@ -498,6 +500,8 @@ func _update_hud() -> void:
 	lbl_extra.text = extra
 	if player:
 		var eff := ""
+		if player.magnet_t > 0.0:
+			eff += tr("Aimant %ds") % int(ceil(player.magnet_t)) + "  "
 		if player.boost_t > 0.0:
 			eff += tr("Boost %ds") % int(ceil(player.boost_t)) + "  "
 		if player.wing_t > 0.0:
@@ -551,6 +555,9 @@ func _on_player_hit(_from: Vector3) -> void:
 func _boss_wins() -> void:
 	if Global.is_endless():
 		return
+	if Global.run["mode"] == "bossrush":
+		_fail(tr("L'Ombre t'a vaincu !"))
+		return
 	if Global.mods["hardcore"]:
 		_fail(tr("L'Ombre t'a vaincu ! (mode Hardcore)"))
 		return
@@ -568,6 +575,8 @@ func _on_boss_progress(_ratio: float) -> void:
 
 func _on_boss_defeated() -> void:
 	boss_beaten = true
+	if Global.run["mode"] == "bossrush":
+		Global.run["hearts"] = mini(hearts + 1, MAX_HEARTS)
 	Global.stats["bosses"] = int(Global.stats["bosses"]) + 1
 	lbl_boss.visible = false
 	_toast(tr("L'Ombre est vaincue !"))
@@ -699,7 +708,7 @@ func _win() -> void:
 		[tr("Rejouer cette étape"), _restart],
 		[tr("Abandonner (menu)"), _abandon],
 	]
-	_show_panel(tr("Éclat récupéré !") if Global.run["mode"] != "free" else tr("Monde terminé !"), lines, buttons)
+	_show_panel(tr("Éclat récupéré !") if not Global.is_single() else tr("Monde terminé !"), lines, buttons)
 
 
 func _continue_run(info: Dictionary) -> void:

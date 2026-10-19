@@ -9,13 +9,13 @@ Textes prêts à copier-coller. Captures d'écran : `godot --path . --script too
 
 ## Accroche
 
-- FR : Saute de dalle en dalle à travers 15 mondes générés au hasard et réunis les éclats du Grand Diamant.
+- FR : Saute de dalle en dalle à travers 16 mondes générés au hasard et réunis les éclats du Grand Diamant.
 - EN: Hop across 15 randomly generated worlds and bring back the shards of the Great Diamond.
 
 ## Description courte (80 caractères)
 
 - FR : Platformeur 3D low-poly : 15 mondes, boss, défis, modificateurs, rejouable à l'infini.
-- EN: Low-poly 3D platformer: 15 worlds, bosses, challenges, modifiers, endlessly replayable.
+- EN: Low-poly 3D platformer: 16 worlds, bosses, challenges, modifiers, endlessly replayable.
 
 ## Description longue (français)
 
@@ -28,15 +28,15 @@ les douze mondes d'un royaume flottant pour retrouver les éclats du Grand Diama
 - Aventure complète, Run éclair, Monde libre, Mode infini avec classement, défis du jour et de la semaine.
 
 **Des pièges à maîtriser**
-- 18 types de plateformes : mobiles, friables, clignotantes, tapis roulants, orbitales, ascenseurs, trampolines, lanceurs, canons, interrupteurs et ponts, portails, tourniquets…
+- 21 types de plateformes : mobiles, friables, clignotantes, tapis roulants, orbitales, ascenseurs, trampolines, lanceurs, canons, interrupteurs et ponts, portails, tourniquets…
 - 5 boss de fin de monde différents (3, 6, 9, 12, 15) : esquive les balayages, les météores et les tirs ciblés.
 - Un fantôme de ton meilleur temps pour te battre toi-même.
 
 **Fais-le à ta façon**
 - 16 modificateurs (gravité, longueur des niveaux de x1 à x3, vent, lave qui monte, brouillard, sans double saut, Hardcore…) qui multiplient ton score.
-- 29 succès, étoiles, 8 couleurs, 6 chapeaux et 5 traînées à débloquer, statistiques, classement local.
+- 31 succès, étoiles, 8 couleurs, 6 chapeaux et 5 traînées à débloquer, statistiques, classement local.
 - Accessibilité : mode daltonien, symboles sur les dalles, aide au saut, taille du texte, touches réassignables.
-- Clavier / souris, manette ou écran tactile. Français, English, Español, Deutsch, Italiano, Português.
+- Clavier / souris, manette ou écran tactile. Français, English, Español, Deutsch, Italiano, Português, Nederlands, Polski, Türkçe, Русский.
 
 Aucun achat intégré, aucune publicité, aucun compte.
 
@@ -51,15 +51,15 @@ of a floating kingdom to recover the shards of the Great Diamond shattered by th
 - Full Adventure, Quick Run, Free World, Endless mode with a leaderboard, daily and weekly challenges.
 
 **Traps to master**
-- 18 platform types: moving, crumbling, blinking, conveyor belts, orbiting, elevators, trampolines, launchers, cannons, switches and bridges, portals, spinners...
+- 21 platform types: moving, crumbling, blinking, conveyor belts, orbiting, elevators, trampolines, launchers, cannons, switches and bridges, portals, spinners...
 - 5 different end-of-world bosses (3, 6, 9, 12, 15): dodge sweeps, meteors and aimed shots.
 - A ghost of your best time to race against yourself.
 
 **Play it your way**
 - 16 modifiers (gravity, level length from x1 to x3, wind, rising lava, fog, no double jump, Hardcore...) that multiply your score.
-- 29 achievements, stars, 8 colors, 6 hats and 5 trails to unlock, statistics, local leaderboard.
+- 31 achievements, stars, 8 colors, 6 hats and 5 trails to unlock, statistics, local leaderboard.
 - Accessibility: colorblind mode, tile symbols, jump assist, text size, rebindable keys.
-- Keyboard / mouse, gamepad or touch screen. French, English, Spanish, German, Italian and Portuguese.
+- Keyboard / mouse, gamepad or touch screen. French, English, Spanish, German, Italian, Portuguese, Dutch, Polish, Turkish and Russian.
 
 No in-app purchases, no ads, no account.
 
@@ -74,7 +74,7 @@ platformer, 3d, low-poly, procedural, roguelike, speedrun, parkour, single playe
 | Moteur | Godot 4.3 |
 | Plateformes | Windows, Linux, macOS, Web, Android |
 | Entrées | Clavier + souris, manette, tactile |
-| Langues | Français, English, Español, Deutsch, Italiano, Português (BR) |
+| Langues | Français, English, Español, Deutsch, Italiano, Português (BR), Nederlands, Polski, Türkçe, Русский |
 | Taille | ~65 Mo (PC), ~25 Mo (APK) |
 | Âge conseillé | Tout public (aucune violence, aucun achat) |
 | Connexion | Optionnelle : une requête vers GitHub pour vérifier les mises à jour (désactivable) |

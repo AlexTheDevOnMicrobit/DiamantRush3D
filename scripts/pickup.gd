@@ -16,6 +16,8 @@ var _done := false
 func _ready() -> void:
 	collision_layer = 0
 	collision_mask = 2
+	if kind == "coin":
+		add_to_group("coin_pickup")
 	var is_gem := kind == "diamond"
 
 	var cs := CollisionShape3D.new()

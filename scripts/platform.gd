@@ -3,6 +3,7 @@ extends AnimatableBody3D
 ##   n normale | m mobile | f friable | c checkpoint | b trampoline | s tourniquet
 ##   k clignotante | v tapis roulant | o orbitale | l ascenseur
 ##   t canon | j lanceur directionnel | y interrupteur | z pont (activé par y) | p portail d'entrée | q portail de sortie
+##   r bumper | g glace | h dalle qui rétrécit | w tapis de vent | a aimant à pièces
 
 const Models = preload("res://scripts/models.gd")
 const Textures = preload("res://scripts/textures.gd")
@@ -17,7 +18,7 @@ const BRIDGE_TIME := 8.0
 
 const SYMBOLS := {
 	"m": "<>", "f": "x", "k": "~", "v": ">>", "o": "O", "l": "^v", "b": "^", "s": "*",
-	"y": "SW", "z": "[]", "j": "=>", "t": "o=", "p": "()", "q": "()", "c": "CP", "r": "@", "g": "i",
+	"y": "SW", "z": "[]", "j": "=>", "t": "o=", "p": "()", "q": "()", "c": "CP", "r": "@", "g": "i", "h": "<>", "w": "~>", "a": "U",
 }
 ## Palette adaptée au daltonisme (Okabe-Ito)
 const CB_COLORS := {
@@ -25,6 +26,7 @@ const CB_COLORS := {
 	"k": Color(0.94, 0.89, 0.26), "v": Color(0.45, 0.45, 0.45), "o": Color(0.34, 0.71, 0.91), "l": Color(0.9, 0.62, 0.0),
 	"t": Color(0.6, 0.15, 0.1), "j": Color(1.0, 0.9, 0.2), "y": Color(0.5, 0.5, 0.5), "z": Color(0.3, 0.8, 0.9),
 	"p": Color(0.55, 0.3, 0.8), "q": Color(0.55, 0.3, 0.8), "r": Color(0.9, 0.4, 0.05), "g": Color(0.65, 0.88, 1.0),
+	"h": Color(0.8, 0.6, 0.0), "w": Color(0.35, 0.75, 0.95), "a": Color(0.85, 0.15, 0.15),
 }
 
 var kind := "n"
@@ -62,6 +64,10 @@ var _cannon_dir := Vector3.RIGHT
 var _button_mat: StandardMaterial3D
 var _bumper: MeshInstance3D
 var _bump_cd := 0.0
+var _shrink_state := 0     # h : 0 repos, 1 rétrécit, 2 reste petite, 3 grandit
+var _shrink_t := 0.0
+var _wind_area: Area3D
+var _wind_dir := Vector3.FORWARD
 
 
 func _ready() -> void:
@@ -88,6 +94,9 @@ func _ready() -> void:
 		"p", "q": tcol = Color(0.6, 0.35, 0.9)
 		"r": tcol = Color(1.0, 0.5, 0.2)
 		"g": tcol = Color(0.7, 0.92, 1.0)
+		"h": tcol = Color(1.0, 0.8, 0.2)
+		"w": tcol = Color(0.5, 0.85, 1.0)
+		"a": tcol = Color(0.95, 0.3, 0.3)
 	if Global.options["colorblind"] and CB_COLORS.has(kind):
 		tcol = CB_COLORS[kind]
 
@@ -118,7 +127,7 @@ func _ready() -> void:
 	_mat.albedo_texture = Textures.speckle(2)
 	_mat.uv1_triplanar = true
 	_mat.uv1_scale = Vector3(0.5, 0.5, 0.5)
-	if kind in ["b", "k", "o", "l", "j", "p", "q", "g"]:
+	if kind in ["b", "k", "o", "l", "j", "p", "q", "g", "w", "a"]:
 		_mat.emission_enabled = true
 		_mat.emission = tcol
 		_mat.emission_energy_multiplier = 0.6
@@ -177,7 +186,7 @@ func _ready() -> void:
 	_col.disabled = kind == "z"
 	add_child(_col)
 
-	if kind in ["f", "c", "b", "j", "y", "p", "r", "g"]:
+	if kind in ["f", "c", "b", "j", "y", "p", "r", "g", "h", "w", "a"]:
 		var area := Area3D.new()
 		area.collision_layer = 0
 		area.collision_mask = 2
@@ -191,6 +200,10 @@ func _ready() -> void:
 		if kind == "r":
 			area_shape.size = Vector3(1.7, 1.6, 1.7)
 			ac.position.y = size.y * 0.5 + 0.8
+		if kind == "w":
+			area_shape.size = Vector3(size.x, 3.5, size.z)
+			ac.position.y = size.y * 0.5 + 1.75
+			_wind_area = area
 		ac.shape = area_shape
 		area.add_child(ac)
 		add_child(area)
@@ -266,6 +279,28 @@ func _build_special() -> void:
 			dmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			disc.material_override = dmat
 			_visual.add_child(disc)
+		"w":
+			_wind_dir = forward if int(absi(prop_seed) % 2) == 0 else -forward
+			_chevrons(_wind_dir, Color(0.6, 0.95, 1.0))
+		"a":
+			var magnet := MeshInstance3D.new()
+			var mt := TorusMesh.new()
+			mt.inner_radius = 0.35
+			mt.outer_radius = 0.7
+			mt.rings = 14
+			mt.ring_segments = 8
+			magnet.mesh = mt
+			magnet.rotation_degrees.x = 90.0
+			magnet.position = Vector3(0, size.y * 0.5 + 0.8, 0)
+			magnet.material_override = Models.material(Color(0.9, 0.15, 0.15), 1.4)
+			_visual.add_child(magnet)
+			var tipm := MeshInstance3D.new()
+			var tb := BoxMesh.new()
+			tb.size = Vector3(1.5, 0.3, 0.25)
+			tipm.mesh = tb
+			tipm.position = Vector3(0, size.y * 0.5 + 0.35, 0.45)
+			tipm.material_override = Models.material(Color(0.9, 0.9, 0.95), 0.6)
+			_visual.add_child(tipm)
 		"r":
 			_bumper = MeshInstance3D.new()
 			var bc2 := CylinderMesh.new()
@@ -372,6 +407,13 @@ func _physics_process(delta: float) -> void:
 			_bumper.scale = _bumper.scale.lerp(Vector3.ONE, 1.0 - exp(-10.0 * delta))
 		"s":
 			_beam.rotation.y += delta * 1.8
+		"h":
+			_update_shrink(delta)
+		"w":
+			if _wind_area:
+				for b in _wind_area.get_overlapping_bodies():
+					if b.is_in_group("player"):
+						b.belt_wind += _wind_dir * 4.5
 		"t":
 			_fire_t += delta
 			if _fire_t >= CANNON_PERIOD - 0.5:
@@ -401,6 +443,31 @@ func _physics_process(delta: float) -> void:
 				_visual.visible = on
 			if on and c > BLINK_ON - 0.45:
 				_visual.visible = int(c * 14.0) % 2 == 0 # avertissement : la dalle clignote vite
+
+
+func _update_shrink(delta: float) -> void:
+	if _shrink_state == 0:
+		return
+	_shrink_t += delta
+	var k := 1.0
+	match _shrink_state:
+		1:
+			k = lerpf(1.0, 0.45, clampf(_shrink_t / 1.6, 0.0, 1.0))
+			if _shrink_t >= 1.6:
+				_shrink_state = 2
+				_shrink_t = 0.0
+		2:
+			k = 0.45
+			if _shrink_t >= 1.4:
+				_shrink_state = 3
+				_shrink_t = 0.0
+		3:
+			k = lerpf(0.45, 1.0, clampf(_shrink_t / 1.4, 0.0, 1.0))
+			if _shrink_t >= 1.4:
+				_shrink_state = 0
+				k = 1.0
+	_visual.scale = Vector3(k, 1.0, k)
+	(_col.shape as BoxShape3D).size = Vector3(size.x * k, size.y, size.z * k)
 
 
 func _shoot() -> void:
@@ -487,6 +554,15 @@ func _on_body_entered(body) -> void:
 				_bumper.scale = Vector3(1.35, 0.7, 1.35)
 		"g":
 			body.ice_count += 1
+		"h":
+			if _shrink_state == 0:
+				_shrink_state = 1
+				_shrink_t = 0.0
+				Global.play_sfx("crumble", 1.4, -9.0)
+		"a":
+			body.magnet_t = 10.0
+			Global.play_sfx("checkpoint", 1.5)
+			Fx.burst(get_parent(), global_position + Vector3(0, 1.0, 0), Color(1.0, 0.3, 0.3), 14, 3.0, false)
 		"p":
 			if partner:
 				var dest: Vector3 = partner.global_position + Vector3(0, partner.size.y * 0.5 + 0.3, 0)

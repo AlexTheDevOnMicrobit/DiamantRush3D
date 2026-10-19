@@ -83,7 +83,17 @@ const STAGES := [
 		"before": "Au cœur du royaume se cache la forteresse de l'Ombre. Chaque salle est un piège, chaque couloir une épreuve. Au sommet t'attend son ultime sentinelle.",
 		"after": "La forteresse s'effondre dans un grand silence. Cette fois, l'Ombre ne reviendra plus.",
 	},
+	{
+		"title": "XVI — L'Atelier de Lumi",
+		"before": "Derrière le phare, une petite salle que Lumi garde pour s'entraîner : un exemplaire de chaque dalle du royaume. Prends ton temps, personne ne te chronomètre ici.",
+		"after": "Lumi range ses outils avec un sourire. Il est prêt pour n'importe quel piège.",
+	},
 ]
+
+const BOSS_TITLE := "Le Défi des Ombres"
+const BOSS_INTRO := "Les cinq sentinelles de l'Ombre se tiennent prêtes, l'une après l'autre. Pas de détour, pas de repos : Lumi n'a que trois vies pour toutes les affronter."
+const BOSS_ENDING_TITLE := "Les cinq sentinelles ont chuté"
+const BOSS_ENDING := "Plus une seule sentinelle ne garde le royaume. L'Ombre est seule face à la lumière."
 
 const ENDING_TITLE := "La lumière revient"
 const ENDING := "Les douze éclats s'assemblent dans le ciel et le Grand Diamant se reforme, plus brillant que jamais. L'Ombre se dissipe sans un bruit.\n\nLes îles du Royaume d'Éclat s'illuminent une à une. Au phare, un petit robot s'assoit enfin pour regarder la lumière.\n\nMerci, Lumi."

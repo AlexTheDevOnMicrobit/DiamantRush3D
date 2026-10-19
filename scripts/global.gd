@@ -2,7 +2,7 @@ extends Node
 ## Autoload : run en cours, modes, progression, sauvegarde, options, modificateurs,
 ## succès, apparences, défis, codes de partage, fantômes, classement, audio.
 
-const VERSION := "3.4.0"
+const VERSION := "3.5.0"
 const REPO := "AlexTheDevOnMicrobit/DiamantRush3D"
 const SAVE_PATH := "user://save.cfg"
 const BACKUP_PATH := "user://save.bak"
@@ -11,6 +11,7 @@ const LevelData = preload("res://scripts/level_data.gd")
 const Story = preload("res://scripts/story.gd")
 const Sfx = preload("res://scripts/sfx.gd")
 const Achievements = preload("res://scripts/achievements.gd")
+const Generator = preload("res://scripts/generator.gd")
 const Translations = preload("res://scripts/translations.gd")
 
 const GRAVITY_NAMES: Array[String] = ["Lunaire", "Normale", "Lourde"]
@@ -86,7 +87,7 @@ const DEFAULT_KEYS := {
 const MUSIC_FILES := [
 	"world_01_prairies", "world_02_foret", "world_03_dunes", "world_04_recif", "world_05_toundra", "world_06_cristaux",
 	"world_07_usine", "world_08_ruines", "world_09_marais", "world_10_volcan", "world_11_neon", "world_12_ciel",
-	"world_13_abysses", "world_14_sucreries", "world_15_forteresse",
+	"world_13_abysses", "world_14_sucreries", "world_15_forteresse", "world_16_atelier",
 ]
 
 var run: Dictionary = {}
@@ -357,7 +358,7 @@ func reset_run(seed_value: int) -> void:
 	run = {
 		"seed": seed_value, "mode": "adventure", "stages": [0], "stage": 0,
 		"time": 0.0, "score": 0, "deaths": 0, "coins": 0, "active": false, "daily": false,
-		"lives": 0, "challenge": "", "objective": {}, "reward": 0, "challenge_kind": "",
+		"lives": 0, "challenge": "", "objective": {}, "reward": 0, "challenge_kind": "", "hearts": 3,
 	}
 
 
@@ -375,6 +376,11 @@ func quick_worlds(seed_value: int) -> Array:
 	for g in groups:
 		out.append(g[rng.randi() % g.size()])
 	return out
+
+
+## Une seule étape (Monde libre, Contre-la-montre) : pas de bonus de fin de run.
+func is_single() -> bool:
+	return run["mode"] == "free" or run["mode"] == "trial"
 
 
 func is_endless() -> bool:
@@ -402,6 +408,8 @@ func generation_extra() -> Dictionary:
 		var st := int(run["stage"])
 		return {"diff_bonus": float(st / playable_worlds().size()) * 1.5,
 			"allow_boss": false, "count_mult": minf(0.55 + float(st) * 0.02, 0.9)}
+	if run["mode"] == "bossrush":
+		return {"count_mult": 0.5}
 	return {}
 
 
@@ -413,16 +421,21 @@ func start_run(seed_value: int, mode: String = "adventure", worlds: Array = [], 
 	run["daily"] = daily
 	match mode:
 		"quick": run["stages"] = quick_worlds(seed_value)
-		"free": run["stages"] = [int(worlds[0]) if not worlds.is_empty() else 0]
+		"free", "trial": run["stages"] = [int(worlds[0]) if not worlds.is_empty() else 0]
+		"bossrush":
+			run["stages"] = Generator.BOSS_WORLDS.duplicate()
+			run["hearts"] = 3
 		"endless":
 			run["stages"] = [0]
 			run["lives"] = ENDLESS_LIVES
 		_: run["stages"] = range(LevelData.ADVENTURE_COUNT)
-	if mode == "free" or mode == "endless":
+	if mode == "free" or mode == "endless" or mode == "trial":
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/level.tscn")
 	elif skip_intro:
 		show_stage_story()
+	elif mode == "bossrush":
+		_story(Story.BOSS_TITLE, Story.BOSS_INTRO, 2, "stage_story", "Affronter les boss")
 	elif mode == "quick":
 		_story(Story.QUICK_TITLE, Story.QUICK_INTRO, int(run["stages"][0]), "stage_story", "C'est parti !")
 	else:
@@ -441,7 +454,7 @@ func show_stage_story() -> void:
 	var theme_idx := current_theme()
 	var info: Dictionary = Story.STAGES[theme_idx]
 	var title: String = tr(info["title"])
-	if run["mode"] == "quick":
+	if run["mode"] == "quick" or run["mode"] == "bossrush":
 		title = tr("Étape %d/%d — %s") % [int(run["stage"]) + 1, stage_total(), tr(LevelData.get_themes()[theme_idx]["name"])]
 	_story(title, tr(info["before"]), theme_idx, "level", "C'est parti !")
 
@@ -473,6 +486,8 @@ func stage_cleared(info: Dictionary) -> void:
 func record_key() -> String:
 	if run["mode"] == "free":
 		return "world_%d" % int((run["stages"] as Array)[0])
+	if run["mode"] == "trial":
+		return "trial_%d_%d" % [int((run["stages"] as Array)[0]), int(run["seed"])]
 	return String(run["mode"])
 
 
@@ -503,15 +518,19 @@ func objective_met(obj: Dictionary) -> bool:
 
 func _finish_run() -> void:
 	run["active"] = false
-	var bonus := int(1000 * multiplier()) if run["mode"] != "free" else 0
+	var bonus := int(1000 * multiplier()) if not is_single() else 0
 	run["score"] = int(run["score"]) + bonus
 	stats["runs"] = int(stats["runs"]) + 1
 	var key := record_key()
 	var new_best := false
-	if not records.has(key) or int(run["score"]) > int((records[key] as Dictionary)["score"]):
+	if run["mode"] == "trial":
+		if not records.has(key) or float(run["time"]) < float((records[key] as Dictionary)["time"]):
+			records[key] = {"score": int(run["score"]), "time": float(run["time"])}
+			new_best = true
+	elif not records.has(key) or int(run["score"]) > int((records[key] as Dictionary)["score"]):
 		records[key] = {"score": int(run["score"]), "time": float(run["time"])}
 		new_best = true
-	var rank := add_score(String(run["mode"]), int(run["score"]), stage_total(), int(run["seed"]))
+	var rank := -1 if run["mode"] == "trial" else add_score(String(run["mode"]), int(run["score"]), stage_total(), int(run["seed"]))
 	var got := Achievements.evaluate_run(self, String(run["mode"]), bool(mods["hardcore"]), bool(run["daily"]))
 	var challenge_text := ""
 	if String(run["challenge"]) != "":
@@ -551,6 +570,20 @@ func _finish_run() -> void:
 		"quick":
 			title = tr(Story.QUICK_ENDING_TITLE)
 			text = tr(Story.QUICK_ENDING) + "\n\n"
+		"bossrush":
+			title = tr(Story.BOSS_ENDING_TITLE)
+			text = tr(Story.BOSS_ENDING) + "
+
+"
+		"trial":
+			text = tr("Contre-la-montre terminé !") + "  " + tr("Temps : %s") % format_time(float(run["time"])) + "
+"
+			if new_best:
+				text += tr("(nouveau record !)") + "
+"
+			else:
+				text += tr("Record : %s") % format_time(float((records[key] as Dictionary)["time"])) + "
+"
 		_:
 			text = tr("%s terminé !") % tr(LevelData.get_themes()[int((run["stages"] as Array)[0])]["name"]) + "\n\n"
 	text += tr("— Résultat —") + "\n" + tr("Score : %d") % int(run["score"])
@@ -1033,7 +1066,8 @@ func _setup_translations() -> void:
 
 const LANGUAGES := [
 	["auto", "Automatique"], ["fr", "Français"], ["en", "English"], ["es", "Español"],
-	["de", "Deutsch"], ["it", "Italiano"], ["pt", "Português"],
+	["de", "Deutsch"], ["it", "Italiano"], ["pt", "Português"], ["nl", "Nederlands"], ["pl", "Polski"],
+	["tr", "Türkçe"], ["ru", "Русский"],
 ]
 
 
@@ -1041,7 +1075,7 @@ func apply_language() -> void:
 	var lang := String(options["language"])
 	if lang == "auto":
 		lang = OS.get_locale_language()
-		if not ["fr", "en", "es", "de", "it", "pt"].has(lang):
+		if not ["fr", "en", "es", "de", "it", "pt", "nl", "pl", "tr", "ru"].has(lang):
 			lang = "en"
 	TranslationServer.set_locale(lang)
 
@@ -1149,8 +1183,9 @@ func _setup_theme() -> void:
 		sb.set_corner_radius_all(10)
 		sb.set_content_margin_all(10)
 		sb.set_border_width_all(2)
-		sb.border_color = Color(0.5, 0.8, 1.0, 0.55) if s != "focus" else Color(1, 1, 1, 0.8)
+		sb.border_color = Color(0.5, 0.8, 1.0, 0.55) if s != "focus" else Color(1.0, 0.85, 0.2, 1.0)
 		if s == "focus":
+			sb.set_border_width_all(4)
 			sb.draw_center = false
 		theme.set_stylebox(String(s), "Button", sb)
 	theme.set_color("font_disabled_color", "Button", Color(0.5, 0.5, 0.56))

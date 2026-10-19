@@ -31,6 +31,8 @@ const DEFS := [
 	["bumper_20", "Boule de flipper", "Rebondis 20 fois sur des bumpers."],
 	["portal_25", "Voyageur", "Traverse 25 portails."],
 	["boss_all", "Chasseur d'Ombres", "Bats les 5 boss différents."],
+	["boss_rush", "Marathon des Ombres", "Termine le Défi des 5 boss."],
+	["time_trial", "Chrono", "Termine un Contre-la-montre."],
 ]
 
 
@@ -74,8 +76,10 @@ static func evaluate_run(g: Node, mode: String, hardcore: bool, daily: bool) -> 
 	var got: Array = []
 	_try(g, got, "quick_run", mode == "quick")
 	_try(g, got, "adventure", mode == "adventure")
-	_try(g, got, "hardcore_run", hardcore and mode != "free")
-	_try(g, got, "daily", daily and mode != "free")
+	_try(g, got, "boss_rush", mode == "bossrush")
+	_try(g, got, "time_trial", mode == "trial")
+	_try(g, got, "hardcore_run", hardcore and mode != "free" and mode != "trial")
+	_try(g, got, "daily", daily and mode != "free" and mode != "trial")
 	return got
 
 

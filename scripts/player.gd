@@ -25,6 +25,8 @@ var wind_t := 0.0
 var walk_phase := 0.0
 var invert_y := 1.0
 var wind_vec := Vector3.ZERO
+var belt_wind := Vector3.ZERO   # poussée des tapis de vent (remise à zéro à chaque image)
+var magnet_t := 0.0             # aimant à pièces : temps restant
 var world_ice := false
 var world_wind := false
 var boost_t := 0.0
@@ -238,7 +240,14 @@ func _physics_process(delta: float) -> void:
 	if launch_t > 0.0 and not on_floor:
 		accel = 2.0
 	var cur_speed := speed * (1.4 if boost_t > 0.0 else 1.0)
-	var target := dir * cur_speed + wind_vec * (0.3 if on_floor else 1.0)
+	var target := dir * cur_speed + wind_vec * (0.3 if on_floor else 1.0) + belt_wind * (0.7 if on_floor else 1.0)
+	belt_wind = Vector3.ZERO
+	if magnet_t > 0.0:
+		magnet_t = maxf(magnet_t - delta, 0.0)
+		for pk in get_tree().get_nodes_in_group("coin_pickup"):
+			var d: Vector3 = (global_position + Vector3(0, 1.0, 0)) - (pk as Node3D).global_position
+			if d.length() < 6.5 and d.length() > 0.05:
+				(pk as Node3D).global_position += d.normalized() * minf(d.length(), 11.0 * delta)
 	velocity.x = move_toward(velocity.x, target.x, accel * delta)
 	velocity.z = move_toward(velocity.z, target.z, accel * delta)
 

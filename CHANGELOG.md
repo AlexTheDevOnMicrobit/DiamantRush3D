@@ -1,5 +1,24 @@
 # Changelog
 
+## 3.5.0
+
+### Nouveau
+- **Contre-la-montre du jour** : une seule étape (monde et seed fixés par la date), record de temps conservé par seed, fantôme du record, succès « Chrono ».
+- **Défi des 5 boss** : les 5 combats de boss à la suite sur des parcours courts, 3 vies pour tout le défi, succès « Marathon des Ombres ».
+- **3 nouvelles dalles** (21 au total) : **dalle qui rétrécit**, **tapis de vent** (pousse aussi en l'air), **aimant** (attire les pièces pendant 10 s), avec astuces, symboles et couleurs daltoniens ; ajoutées aux poids de plusieurs mondes.
+- **Monde 16, l'Atelier de Lumi** (secret) : un peu de chaque piège, avec son chapitre d'histoire.
+- **4 nouvelles langues** : néerlandais, polonais, turc, russe (10 langues au total).
+- **Navigation manette** : B / Échap revient à la page précédente ; le focus est entouré en jaune plus épais.
+- 2 nouveaux succès (31 au total).
+
+### À savoir
+- Les traductions des nouvelles langues sont rédigées avec l'aide d'une IA et n'ont pas été relues par des locuteurs natifs.
+- Non fait (reporté) : gravité inversée, saison / thèmes temporaires, japonais / chinois / coréen (police à embarquer), remappage des boutons de la manette, taille réglable des boutons tactiles, sous-titres directionnels.
+
+### Vérifié
+- `tests/smoke.gd` : les trois nouvelles dalles (rétrécissement, poussée, aimant), l'Atelier, le Contre-la-montre (record par seed, un temps plus lent ne le remplace pas), le Défi des boss (vie conservée, succès) et les 10 langues.
+- Non vérifié à la main : sensation de jeu des nouvelles dalles, lisibilité, équilibrage.
+
 ## 3.4.0
 
 ### Nouveau

@@ -4,7 +4,7 @@ extends RefCounted
 ##   type : n normale | m mobile | f friable | c checkpoint | b trampoline | s tourniquet
 ##          k clignotante | v tapis roulant | o orbitale | l ascenseur
 ##          t canon | j lanceur | y interrupteur | z pont | p portail (entrée) | q portail (sortie)
-##          r bumper | g plaque de glace
+##          r bumper | g plaque de glace | h dalle qui rétrécit | w tapis de vent | a aimant à pièces
 ##   cap  : (optionnel) nouvelle direction 0 = -Z, 1 = +X, 2 = +Z, 3 = -X
 
 const LevelData = preload("res://scripts/level_data.gd")
@@ -12,7 +12,7 @@ const HEADINGS: Array[Vector3] = [
 	Vector3(0, 0, -1), Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(-1, 0, 0),
 ]
 const UNSTABLE := ["m", "f", "k", "o", "l", "z"]
-const ALL_KINDS := ["n", "m", "f", "s", "b", "k", "v", "o", "l", "t", "j", "y", "p", "r", "g"]
+const ALL_KINDS := ["n", "m", "f", "s", "b", "k", "v", "o", "l", "t", "j", "y", "p", "r", "g", "h", "w", "a"]
 const MAX_COUNT := 90
 const BOSS_WORLDS := [2, 5, 8, 11, 14]
 
@@ -221,6 +221,11 @@ static func _pick_kind(rng: RandomNumberGenerator, weights: Dictionary, i: int, 
 			w[k] = 0.0
 	if prev_kind == "r":
 		w["r"] = 0.0
+	for k2 in ["h", "w", "a"]:
+		if prev_kind == k2:
+			w[k2] = 0.0
+	if prev_kind == "b":
+		w["w"] = 0.0
 	if prev_kind == "t" or hazard_run >= 2:
 		w["t"] = 0.0
 		w["s"] = 0.0
@@ -275,7 +280,13 @@ static func _pick_size(rng: RandomNumberGenerator, kind: String, base: float, la
 			s = clampf(s, 4.6, 6.0)
 		"g":
 			s = clampf(s, 3.4, 5.4)
-	if rng.randf() < 0.3 and not (kind in ["v", "t", "p", "q", "y", "z", "j", "r", "g"]):
+		"h":
+			s = clampf(s, 3.8, 5.0)
+		"w":
+			s = clampf(s, 3.6, 5.4)
+		"a":
+			s = clampf(s, 3.2, 4.4)
+	if rng.randf() < 0.3 and not (kind in ["v", "t", "p", "q", "y", "z", "j", "r", "g", "h", "w"]):
 		return Vector2(s, clampf(s + rng.randf_range(-0.8, 0.8), 2.6, 6.0))
 	return Vector2(s, s)
 

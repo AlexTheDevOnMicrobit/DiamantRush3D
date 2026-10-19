@@ -67,6 +67,11 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# B de la manette / Échap : retour à la page précédente
+	if capture_action == "" and event.is_action_pressed("ui_cancel") and current_page != "main":
+		get_viewport().set_input_as_handled()
+		_show("options" if current_page in ["access", "backup"] else "main")
+		return
 	# capture d'une nouvelle touche (remappage)
 	if capture_action != "" and event is InputEventKey and event.pressed and not event.echo:
 		get_viewport().set_input_as_handled()
@@ -253,6 +258,12 @@ func _build_run() -> void:
 	vb.add_child(_centered(UI.button(tr("Aventure — 12 mondes, de plus en plus durs"), _start.bind("adventure"), Vector2(560, 58))))
 	vb.add_child(_centered(UI.button(tr("Run éclair — 5 mondes tirés au sort"), _start.bind("quick"), Vector2(560, 58))))
 	vb.add_child(_centered(UI.button(tr("Mode infini — 3 vies, de plus en plus dur"), _start.bind("endless"), Vector2(560, 58))))
+	vb.add_child(_centered(UI.button(tr("Défi des 5 boss — 3 vies pour tous les battre"), _start.bind("bossrush"), Vector2(560, 58))))
+	var tkey := "trial_%d_%d" % [Global.daily_seed() % LevelData.ADVENTURE_COUNT, Global.daily_seed()]
+	var ttext := tr("Contre-la-montre du jour — une étape, un record")
+	if Global.records.has(tkey):
+		ttext += "  (" + Global.format_time(float((Global.records[tkey] as Dictionary)["time"])) + ")"
+	vb.add_child(_centered(UI.button(ttext, _start_trial, Vector2(560, 58))))
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -290,6 +301,11 @@ func _build_run() -> void:
 
 func _random_seed() -> int:
 	return randi() % 900000 + 100000
+
+
+func _start_trial() -> void:
+	var seed_value := Global.daily_seed()
+	Global.start_run(seed_value, "trial", [seed_value % LevelData.ADVENTURE_COUNT])
 
 
 func _start(mode: String) -> void:
@@ -346,7 +362,7 @@ func _build_worlds() -> void:
 			text += "   •   %d pts" % int((Global.records[key] as Dictionary)["score"])
 		vb.add_child(_centered(UI.button(text, _start_world.bind(i), Vector2(700, 54))))
 	if not Global.secret_unlocked():
-		_wrap(vb, tr("Termine l'Aventure pour débloquer 3 mondes secrets."), 18, Color(1, 0.9, 0.5))
+		_wrap(vb, tr("Termine l'Aventure pour débloquer les mondes secrets."), 18, Color(1, 0.9, 0.5))
 	vb.add_child(_centered(UI.button("Retour", _show.bind("main"), Vector2(700, 54))))
 
 
@@ -676,7 +692,7 @@ func _build_stats() -> void:
 
 
 func _score_line(rank: int, e: Dictionary) -> String:
-	var modes := {"adventure": "Aventure", "quick": "Éclair", "endless": "Infini", "free": "Monde libre"}
+	var modes := {"adventure": "Aventure", "quick": "Éclair", "endless": "Infini", "free": "Monde libre", "bossrush": "Défi des boss", "trial": "Contre-la-montre"}
 	return "%d. %d pts — %s — %s %d — seed %d — %s" % [rank, int(e["score"]), tr(modes.get(String(e["mode"]), "?")), tr("étapes"), int(e["stages"]), int(e["seed"]), String(e["date"])]
 
 

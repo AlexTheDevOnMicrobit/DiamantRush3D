@@ -42,6 +42,7 @@ godot --headless --path . --script tools/check_audio.gd
 | `world_13_abysses` | Abysses Lumineuses (monde secret) | oui | Aquatique, onirique, bulles et cloches (~70 BPM) |
 | `world_14_sucreries` | Pays des Sucreries (monde secret) | oui | Joyeuse, boîte à musique, sautillante (~110 BPM) |
 | `world_15_forteresse` | Forteresse de l'Ombre (monde secret) | oui | Sombre, orgue et cordes graves, menaçante (~90 BPM) |
+| `world_16_atelier` | Atelier de Lumi (monde secret) | oui | Calme, studieuse, petits instruments (~85 BPM) |
 | `win` | Étape terminée | non (2 à 6 s) | Petite fanfare |
 | `lose` | Run perdue (accepte aussi `loose`) | non (2 à 4 s) | Mélodie descendante douce |
 | `run_complete` | Fin de l'Aventure / Run éclair | non (10 à 15 s) | Triomphale |

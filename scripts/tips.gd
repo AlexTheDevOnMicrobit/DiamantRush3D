@@ -16,6 +16,9 @@ const TIPS := {
 	"s": "Tourniquet : saute par-dessus la barre rouge quand elle arrive.",
 	"r": "Bumper : il te repousse, contourne-le par les côtés ou laisse-toi rebondir.",
 	"g": "Glace : le sol est glissant, anticipe tes arrêts.",
+	"h": "Dalle qui rétrécit : reste au centre, elle reprend sa taille un peu plus tard.",
+	"w": "Tapis de vent : un souffle te pousse dans sa direction, même en l'air.",
+	"a": "Aimant : pendant 10 secondes, les pièces proches viennent à toi.",
 	"c": "Checkpoint : si tu tombes, tu repars d'ici.",
 }
 

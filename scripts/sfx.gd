@@ -92,9 +92,9 @@ static func music(theme: int) -> AudioStreamWAV:
 	var scales := [
 		[0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 2, 3, 7, 8], [0, 1, 5, 7, 8], [0, 2, 7, 9, 12], [0, 4, 7, 11, 14],
 	]
-	var roots: Array[float] = [196.0, 174.6, 220.0, 207.7, 164.8, 174.6, 130.8, 196.0, 146.8, 146.8, 185.0, 233.1, 138.6, 261.6, 123.5]
-	var tempo: Array[float] = [0.16, 0.2, 0.17, 0.15, 0.22, 0.18, 0.13, 0.19, 0.24, 0.14, 0.12, 0.22, 0.21, 0.15, 0.13]
-	var theme_i := clampi(theme, 0, 14)
+	var roots: Array[float] = [196.0, 174.6, 220.0, 207.7, 164.8, 174.6, 130.8, 196.0, 146.8, 146.8, 185.0, 233.1, 138.6, 261.6, 123.5, 246.9]
+	var tempo: Array[float] = [0.16, 0.2, 0.17, 0.15, 0.22, 0.18, 0.13, 0.19, 0.24, 0.14, 0.12, 0.22, 0.21, 0.15, 0.13, 0.17]
+	var theme_i := clampi(theme, 0, 15)
 	var step: float = tempo[theme_i]
 	var scale: Array = scales[theme_i % scales.size()]
 	var root: float = roots[theme_i]

@@ -8,7 +8,7 @@ const LevelData = preload("res://scripts/level_data.gd")
 const Achievements = preload("res://scripts/achievements.gd")
 const Projectile = preload("res://scripts/projectile.gd")
 const Translations = preload("res://scripts/translations.gd")
-const ALL_KINDS := ["n", "m", "f", "c", "b", "s", "k", "v", "o", "l", "t", "j", "y", "z", "p", "q", "r", "g"]
+const ALL_KINDS := ["n", "m", "f", "c", "b", "s", "k", "v", "o", "l", "t", "j", "y", "z", "p", "q", "r", "g", "h", "w", "a"]
 const BOSS_WORLDS := [2, 5, 8, 11, 14]
 
 var g
@@ -48,6 +48,7 @@ func _initialize() -> void:
 	await _test_touch()
 	await _test_accessibility()
 	await _test_backup()
+	await _test_v35()
 
 	g.reset_mods(false)
 	g.reset_stats()
@@ -61,13 +62,13 @@ func _initialize() -> void:
 # ---------------------------------------------------------------- générateur
 
 func _test_generator() -> void:
-	print("== Générateur : 15 mondes x 4 longueurs x 3 difficultés x 8 seeds")
+	print("== Générateur : 16 mondes x 4 longueurs x 3 difficultés x 8 seeds")
 	var kinds := {}
 	var bad := 0
 	var det := true
 	var pair_bad := 0
 	var boss_bad := 0
-	for w in 15:
+	for w in 16:
 		for li in 4:
 			for dsel in 3:
 				for sd in 8:
@@ -121,7 +122,7 @@ func _test_generator() -> void:
 # ---------------------------------------------------------------- construction des mondes
 
 func _test_worlds() -> void:
-	print("== Les 15 mondes se construisent (tous modificateurs, Marathon, Expert)")
+	print("== Les 16 mondes se construisent (tous modificateurs, Marathon, Expert)")
 	g.mods["gravity"] = 0
 	g.mods["length"] = 3
 	g.mods["difficulty"] = 2
@@ -129,7 +130,7 @@ func _test_worlds() -> void:
 		g.mods[t[0]] = true
 	g.mods["hardcore"] = false
 	var seen_kinds := {}
-	for w in 15:
+	for w in 16:
 		g.reset_run(1000 + w)
 		g.run["stages"] = [w]
 		g.run["mode"] = "free"
@@ -554,7 +555,7 @@ func _test_misc() -> void:
 	check(all_ok and Translations.EN.size() > 280, "traductions complètes (%d textes)" % Translations.EN.size())
 	check("%d" in tr("Étape %d/%d — %s") and tr("Étape %d/%d — %s") % [1, 12, "X"] == "Stage 1/12 — X", "formats traduits")
 	check(g.mod_summary() == "No modifiers", "résumé des modificateurs en anglais")
-	for pair in [["es", Translations.ES], ["de", Translations.DE], ["it", Translations.IT], ["pt", Translations.PT]]:
+	for pair in [["es", Translations.ES], ["de", Translations.DE], ["it", Translations.IT], ["pt", Translations.PT], ["nl", Translations.NL], ["pl", Translations.PL], ["tr", Translations.TR], ["ru", Translations.RU]]:
 		var lang_code: String = pair[0]
 		var table: Dictionary = pair[1]
 		g.options["language"] = lang_code
@@ -568,7 +569,7 @@ func _test_misc() -> void:
 		check(g.mod_summary() != "Aucun modificateur" and g.mod_summary() != "No modifiers", "résumé des modificateurs traduit (%s)" % lang_code)
 	g.options["language"] = "auto"
 	g.apply_language()
-	check(["fr", "en", "es", "de", "it", "pt"].has(TranslationServer.get_locale().substr(0, 2)), "langue automatique : %s" % TranslationServer.get_locale())
+	check(["fr", "en", "es", "de", "it", "pt", "nl", "pl", "tr", "ru"].has(TranslationServer.get_locale().substr(0, 2)), "langue automatique : %s" % TranslationServer.get_locale())
 	g.options["language"] = "fr"
 	g.apply_language()
 	check(tr("Nouvelle run") == "Nouvelle run" and g.mod_summary() == "Aucun modificateur", "retour au français")
@@ -587,6 +588,105 @@ func _test_misc() -> void:
 	check(true, "échelle du texte appliquée (sans erreur)")
 	g.options["text_scale"] = f1
 	lab.free()
+
+
+# ---------------------------------------------------------------- 3.5 : pièges, modes, atelier
+
+func _test_v35() -> void:
+	print("== Contenu 3.5.0")
+	g.reset_mods(false)
+	g.reset_stats()
+	# dalle qui rétrécit
+	var lv = await _find_level("h")
+	check(lv != null, "niveau avec dalle qui rétrécit trouvé")
+	if lv:
+		var h = _first(lv, "h")
+		var full: float = h.size.x
+		lv.player.teleport(h.global_position + Vector3(0, 1.3, 0))
+		for f in 110:
+			await physics_frame
+		var shrunk: float = (h._col.shape as BoxShape3D).size.x
+		check(shrunk < full * 0.6, "la dalle rétrécit sous Lumi (%.1f -> %.1f)" % [full, shrunk])
+		lv.player.teleport(h.global_position + Vector3(0, 14, 0))
+		for f in 260:
+			await physics_frame
+		check(absf((h._col.shape as BoxShape3D).size.x - full) < 0.05, "la dalle retrouve sa taille")
+		root.remove_child(lv)
+		lv.free()
+	# tapis de vent
+	lv = await _find_level("w")
+	check(lv != null, "niveau avec tapis de vent trouvé")
+	if lv:
+		var w = _first(lv, "w")
+		lv.player.teleport(w.global_position + Vector3(0, 1.3, 0))
+		for f in 25:
+			await physics_frame
+		var along: float = lv.player.velocity.dot(w._wind_dir)
+		check(along > 0.5, "le tapis de vent pousse Lumi (%.1f m/s)" % along)
+		root.remove_child(lv)
+		lv.free()
+	# aimant
+	lv = await _find_level("a")
+	check(lv != null, "niveau avec aimant trouvé")
+	if lv:
+		var a = _first(lv, "a")
+		lv.player.teleport(a.global_position + Vector3(0, 1.3, 0))
+		for f in 5:
+			await physics_frame
+		check(lv.player.magnet_t > 5.0, "l'aimant s'active")
+		var pos: Vector3 = lv.player.global_position + Vector3(3.5, 1.0, 0)
+		lv._make_pickup(pos, "coin")
+		var pk = lv.pickups.back()
+		var d0: float = pk.global_position.distance_to(lv.player.global_position)
+		for f in 20:
+			await physics_frame
+		check(not is_instance_valid(pk) or pk.global_position.distance_to(lv.player.global_position) < d0 - 0.5 or pk._done, "l'aimant attire les pièces")
+		root.remove_child(lv)
+		lv.free()
+	# atelier
+	var th: Dictionary = load("res://scripts/level_data.gd").get_themes()[15]
+	check(th["name"] == "Atelier de Lumi" and th.get("secret", false), "monde 16 : l'Atelier (secret)")
+	var kinds_seen := {}
+	for sd in 6:
+		var d: Dictionary = Gen.generate(900 + sd, 15, 0, 1.5, 1)
+		for st in d["steps"]:
+			kinds_seen[str(st[5])] = true
+	check(kinds_seen.size() >= 14, "l'Atelier présente presque tous les types de dalles (%d)" % kinds_seen.size())
+	# contre-la-montre
+	g.start_run(424242, "trial", [3])
+	await process_frame
+	check(g.run["mode"] == "trial" and g.is_single() and g.stage_total() == 1, "contre-la-montre : une étape")
+	g.stage_cleared({"time": 33.0, "score": 1200, "coins": 3, "deaths": 0})
+	await process_frame
+	await process_frame
+	var tkey := "trial_3_424242"
+	check(g.records.has(tkey) and absf(float(g.records[tkey]["time"]) - 33.0) < 0.01, "record de temps enregistré par seed")
+	check(g.achievements.has("time_trial") and g.leaderboard["all"].is_empty(), "succès Chrono, pas d'entrée au classement")
+	g.start_run(424242, "trial", [3])
+	await process_frame
+	g.stage_cleared({"time": 50.0, "score": 900, "coins": 1, "deaths": 0})
+	await process_frame
+	await process_frame
+	check(absf(float(g.records[tkey]["time"]) - 33.0) < 0.01, "un temps plus lent ne remplace pas le record")
+	# défi des boss
+	g.start_run(808, "bossrush")
+	await process_frame
+	await process_frame
+	check(str(g.run["stages"]) == str(Gen.BOSS_WORLDS) and g.stage_total() == 5, "défi des boss : les 5 mondes de boss")
+	var blv = load("res://scenes/level.tscn").instantiate()
+	g.run["hearts"] = 2
+	root.add_child(blv)
+	await physics_frame
+	check(blv.boss != null and blv.hearts == 2, "défi des boss : arène + vie conservée (%d)" % blv.hearts)
+	root.remove_child(blv)
+	blv.free()
+	for st in 5:
+		g.stage_cleared({"time": 60.0, "score": 1000, "coins": 2, "deaths": 0})
+		await process_frame
+		await process_frame
+	check(g.achievements.has("boss_rush") and g.records.has("bossrush"), "défi des boss terminé : succès et record")
+	g.reset_stats()
+	g.reset_mods(false)
 
 
 # ---------------------------------------------------------------- 3.3 : sauvegarde
@@ -663,13 +763,13 @@ func _test_menus() -> void:
 	var menu = load("res://scenes/main_menu.tscn").instantiate()
 	root.add_child(menu)
 	await process_frame
-	for lang in ["fr", "en", "es", "de", "it", "pt"]:
+	for lang in ["fr", "en", "es", "de", "it", "pt", "nl", "pl", "tr", "ru"]:
 		g.options["language"] = lang
 		g.apply_language()
 		for p in ["main", "run", "worlds", "challenges", "mods", "options", "access", "backup", "stats", "skins", "story", "help"]:
 			menu._show(p)
 			await process_frame
-	check(true, "12 pages du menu construites dans les 6 langues")
+	check(true, "12 pages du menu construites dans les 10 langues")
 	g.options["language"] = "fr"
 	g.apply_language()
 	menu._show("run")
@@ -846,7 +946,7 @@ func _test_new_content() -> void:
 	# mondes secrets
 	check(not g.secret_unlocked() and g.playable_worlds().size() == 12, "mondes secrets verrouillés au départ")
 	g.achievements["adventure"] = true
-	check(g.secret_unlocked() and g.playable_worlds().size() == 15, "mondes secrets débloqués après l'Aventure")
+	check(g.secret_unlocked() and g.playable_worlds().size() == 16, "mondes secrets débloqués après l'Aventure")
 	g.reset_run(31)
 	g.run["mode"] = "endless"
 	g.run["stage"] = 14

@@ -4,10 +4,10 @@ Platformeur 3D low-poly réalisé avec **Godot 4.3**. Tu incarnes **Lumi**, un p
 
 Tout est généré par code : **aucun asset externe** (modèles, textures, sons, musiques, particules). Tu peux déposer tes propres musiques et sons dans `audio/` (voir [audio/README.md](audio/README.md)).
 
-- Version : **3.4.0** (voir [CHANGELOG.md](CHANGELOG.md))
+- Version : **3.5.0** (voir [CHANGELOG.md](CHANGELOG.md))
 - Plateformes : Windows, Linux, macOS, Web, **Android** (et iOS avec un Mac)
 - Contrôles : clavier / souris, manette, écran tactile
-- Langues : **6** — français, English, español, Deutsch, italiano, português (Brésil)
+- Langues : **10** — français, English, español, Deutsch, italiano, português (Brésil), Nederlands, polski, Türkçe, русский
 - Licence : MIT ([LICENSE](LICENSE))
 
 ---
@@ -16,7 +16,7 @@ Tout est généré par code : **aucun asset externe** (modèles, textures, sons,
 
 1. [Installation et lancement](#installation-et-lancement)
 2. [Modes de jeu](#modes-de-jeu)
-3. [Les 15 mondes et leurs boss](#les-15-mondes-et-leurs-boss)
+3. [Les 16 mondes et leurs boss](#les-16-mondes-et-leurs-boss)
 4. [Commandes](#commandes)
 5. [Plateformes et bonus](#plateformes-et-bonus)
 6. [Modificateurs](#modificateurs)
@@ -58,13 +58,15 @@ Voir [Construire les versions](#construire-les-versions-exe-apk-web). Les archiv
 | **Run éclair** | 5 mondes tirés selon la seed (un par palier de difficulté). |
 | **Mode infini** | Étapes courtes qui s'enchaînent sans fin, de plus en plus dures, **3 vies** (une vie gagnée toutes les 3 étapes). Classement local. |
 | **Monde libre** | Un seul monde au choix pour s'entraîner. |
+| **Contre-la-montre du jour** | Une seule étape (monde et seed fixés par la date, identiques pour tout le monde), avec le **fantôme** de ton record. Le meilleur temps est conservé par seed ; pas de bonus ni de classement. |
+| **Défi des 5 boss** | Les 5 combats de boss à la suite (mondes 3, 6, 9, 12, 15), des parcours courts entre eux, **3 vies pour tout le défi** : une vie est rendue après chaque boss, un boss qui te bat met fin au défi. |
 | **Défis** | Défi du jour et défi de la semaine : seed et modificateurs imposés, objectif à atteindre pour gagner des pièces. |
 
 Chaque étape : tombe dans le vide et tu réapparais au dernier **checkpoint** ; ramasse les pièces ; touche le **diamant**. Une run se termine à la fin du dernier monde, ou plus tôt en Hardcore / Contre-la-montre. Un **fantôme** de ton meilleur passage peut t'accompagner quand tu rejoues une même étape (même seed).
 
 ---
 
-## Les 15 mondes et leurs boss
+## Les 16 mondes et leurs boss
 
 Chaque monde a ses couleurs, sa musique, ses décors, ses particules et sa **difficulté propre**.
 
@@ -85,8 +87,9 @@ Chaque monde a ses couleurs, sa musique, ses décors, ses particules et sa **dif
 | 13 | Abysses Lumineuses (secret) | [###..] | Océan lumineux : orbitales, ascenseurs, portails, bumpers |
 | 14 | Pays des Sucreries (secret) | [##...] | Monde joyeux : trampolines, bumpers, lanceurs |
 | 15 | Forteresse de l'Ombre (secret) | [#####] | Le plus dur : tous les pièges. **Boss final** |
+| 16 | Atelier de Lumi (secret) | [#....] | Bac à sable : un peu de chaque piège, parfait pour s'entraîner |
 
-Les **mondes secrets 13 à 15** se débloquent en terminant l'Aventure (succès « Gardien du phare ») ; ils sont ensuite jouables en **Monde libre** et inclus dans le **Mode infini**.
+Les **mondes secrets 13 à 16** se débloquent en terminant l'Aventure (succès « Gardien du phare ») ; ils sont ensuite jouables en **Monde libre** et inclus dans le **Mode infini**.
 
 **Boss de fin des mondes 3, 6, 9, 12 et 15 : l'Ombre.** Le diamant n'apparaît qu'après avoir survécu à ses attaques dans l'arène. Tu as **3 vies** ; à zéro, tu repars du checkpoint et le combat recommence. Chaque boss a sa couleur, ses attaques et son rythme :
 
@@ -118,7 +121,7 @@ Les touches clavier sont reconnues par position physique : WASD fonctionne parei
 
 ## Plateformes et bonus
 
-18 types de dalles. Le menu **Commandes** du jeu les rappelle ; l'option *Symboles sur les dalles* ajoute un petit repère sur chacune.
+21 types de dalles. Le menu **Commandes** du jeu les rappelle ; l'option *Symboles sur les dalles* ajoute un petit repère sur chacune.
 
 | Aspect | Type | Comportement |
 |---|---|---|
@@ -137,6 +140,9 @@ Les touches clavier sont reconnues par position physique : WASD fonctionne parei
 | Cyan transparent | **Pont** | Solide seulement quand l'interrupteur est actif |
 | Orange vif avec un plot | **Bumper** | Un plot rond au centre te repousse de quelques mètres : contourne-le par les côtés, ou laisse-toi rebondir |
 | Bleu glacier | **Plaque de glace** | Le sol y est glissant, même hors des mondes de glace |
+| Jaune doré | **Dalle qui rétrécit** | Elle rétrécit sous tes pieds (de moitié environ) puis reprend sa taille : reste au centre |
+| Cyan avec chevrons | **Tapis de vent** | Un souffle te pousse dans le sens des chevrons, au sol comme en l'air |
+| Rouge avec un aimant | **Aimant** | Pendant 10 secondes, les pièces proches viennent vers toi |
 | Anneau violet | **Portail** | Entre dans l'anneau : tu ressors sur la dalle suivante, de l'autre côté d'un très grand vide |
 | Barre rouge | Tourniquet | Barre tournante à sauter |
 
@@ -183,7 +189,7 @@ Score d'une étape :
 Fin d'Aventure / Run éclair : **bonus de 1000 × multiplicateur**.
 
 - **Classement local** : top 10 général et top 10 du mode infini (écran *Succès et statistiques*). Les records par mode sont aussi sauvegardés.
-- **29 succès** : sans chute, toutes les pièces, marathon, Hardcore, run du jour, les 12 mondes, boss, mode infini, défi réussi, fantôme battu… Une annonce apparaît en jeu et à la fin de l'étape.
+- **31 succès** : sans chute, toutes les pièces, marathon, Hardcore, run du jour, les 12 mondes, boss, mode infini, défi réussi, fantôme battu… Une annonce apparaît en jeu et à la fin de l'étape.
 - **Étoiles** : jusqu'à 3 par étape (finir, ramasser **toutes** les pièces, ne **jamais tomber**) ; le meilleur résultat par monde est conservé.
 - **Apparences de Lumi** (écran *Apparences*) : 8 **couleurs** débloquées avec les pièces, 6 **chapeaux** (bonnet, couronne, haut-de-forme, casque à cornes, halo, cornes de diable) et 5 **traînées** (étincelles, flammes, arc-en-ciel, étoiles, fumée) débloqués avec les étoiles.
 - **Astuces** : la première fois qu'un type de dalle apparaît, une courte astuce explique comment s'en sortir (désactivable dans Options).
@@ -243,7 +249,7 @@ Un ami le colle dans *Utiliser* pour jouer exactement la même run, avec les mê
 
 **Mode photo** : dans le menu Pause (PC), *Mode photo* masque l'interface ; Espace ou Entrée enregistre une capture PNG dans le dossier utilisateur (`photos/`), Échap revient à la pause.
 
-**Menus à la manette / au clavier** : le premier bouton de chaque page a le focus ; D-pad ou flèches pour naviguer, A ou Entrée pour valider.
+**Menus à la manette / au clavier** : le premier bouton de chaque page a le focus (entouré en jaune) ; D-pad ou flèches pour naviguer, A ou Entrée pour valider, **B ou Échap pour revenir** à la page précédente.
 
 **Sauvegarde** (Options → *Sauvegarde : copier / restaurer*) : le jeu garde une **copie de secours** (`save.bak`) à chaque lancement et la relit si `save.cfg` est illisible. Le même écran affiche un **code de sauvegarde** (commence par `DR3-`) à copier pour transférer ta progression et tes options vers un autre appareil, puis à coller et restaurer ; un code invalide ne change rien.
 
@@ -276,7 +282,7 @@ Le générateur ([scripts/generator.gd](scripts/generator.gd)) :
 Sons et musiques sont **synthétisés** par défaut. Pour utiliser tes propres fichiers, dépose-les dans `audio/music/` et `audio/sfx/` avec les noms exacts du tableau de [audio/README.md](audio/README.md) (OGG conseillé ; WAV et MP3 acceptés, y compris les doubles extensions comme `jump.ogg.wav`). Le jeu les prend automatiquement, **piste par piste** : une piste absente garde sa version synthétisée.
 
 - **Effets sonores** : le jeu retire le silence de fin et **égalise le volume** de chaque fichier (gain automatique), tu n'as pas à les normaliser parfaitement.
-- **Musiques** : 1 par monde (15), menu, histoire, boss, plus les jingles `win`, `lose`, `run_complete`.
+- **Musiques** : 1 par monde (16), menu, histoire, boss, plus les jingles `win`, `lose`, `run_complete`.
 - **Vérification** : `godot --headless --path . --script tools/check_audio.gd` liste ce qui est fourni, ce qui manque, et la durée / le gain de chaque effet.
 
 ---
@@ -306,10 +312,10 @@ scenes/                  main_menu, story, level
 scripts/
   global.gd              Autoload : run, modes, défis, codes, fantômes, classement, options, audio, sauvegarde
   generator.gd           Génération procédurale des parcours
-  level_data.gd          Les 15 mondes (couleurs, difficulté, profil de pièges)
+  level_data.gd          Les 16 mondes (couleurs, difficulté, profil de pièges)
   level.gd               Construction d'une étape, HUD, pause, boss, fantôme, victoire / défaite
   player.gd              Lumi : mouvement, caméra, ombre, bonus, animations
-  platform.gd            Dalles (18 types)
+  platform.gd            Dalles (21 types)
   projectile.gd, boss.gd Tirs des canons et boss de fin de monde
   ghost.gd               Fantôme du meilleur temps
   pickup.gd              Pièces, bonus, diamant
@@ -339,14 +345,14 @@ docs/                    ANDROID.md, MACOS_SIGNING.md, STORE_PAGE.md
 
 ### Ajouter une langue
 
-[translations.gd](scripts/translations.gd) contient un dictionnaire par langue (`EN`, `ES`, `DE`, `IT`, `PT`) : la clé est le texte français, la valeur sa traduction (les `%d`, `%s`, `%.2f` doivent rester dans le même ordre). Pour ajouter une langue (par exemple le néerlandais) :
+[translations.gd](scripts/translations.gd) contient un dictionnaire par langue (`EN`, `ES`, `DE`, `IT`, `PT`, `NL`, `PL`, `TR`, `RU`) : la clé est le texte français, la valeur sa traduction (les `%d`, `%s`, `%.2f` doivent rester dans le même ordre). Pour ajouter une langue (par exemple le néerlandais) :
 
 1. Copie le dictionnaire `EN` sous le nom `NL` et traduis les valeurs.
 2. Dans `build()`, ajoute `list.append(_make("nl", NL))`.
 3. Dans [global.gd](scripts/global.gd), ajoute `["nl", "Nederlands"]` à `LANGUAGES` et `"nl"` à la liste de `apply_language()`.
 4. Ajoute la langue à la boucle de test de `tests/smoke.gd`.
 
-Les textes sans traduction restent en français. Les traductions espagnole, allemande, italienne et portugaise ont été rédigées avec l'aide d'une IA : des corrections de locuteurs natifs sont les bienvenues.
+Les textes sans traduction restent en français. Les traductions espagnole, allemande, italienne, portugaise, néerlandaise, polonaise, turque et russe ont été rédigées avec l'aide d'une IA : des corrections de locuteurs natifs sont les bienvenues.
 
 ---
 
@@ -356,7 +362,7 @@ Tout se lance en ligne de commande, **sans fenêtre** (`--headless`). Remplace `
 
 ### Test de fumée
 
-Vérifie le générateur (15 mondes × 4 longueurs × 3 difficultés), la construction des 15 mondes avec **tous** les modificateurs, la sauvegarde 3.3 (code, copie de secours, gaucher), le contenu 3.2 (bumper, glace, mondes secrets, étoiles, chapeaux, traînées, Nuit noire / Sans checkpoint / Lumi miniature, astuces, rayon du boss, série de défis, égalisation audio), le comportement de chaque nouveau piège (lanceur, portail, interrupteur/pont, canon, tapis, clignotante, orbitale, ascenseur), le boss (réveil, tirs, coups, défaite, diamant), le mode infini et le classement, les défis et codes de partage, le fantôme, les runs, succès, apparences, sauvegarde, remappage des touches, versions et traductions, les 12 pages de menu dans les 6 langues (et la complétude de chaque traduction), les commandes tactiles, la manette, l'accessibilité, l'ombre et la caméra anti-traversée.
+Vérifie le générateur (16 mondes × 4 longueurs × 3 difficultés), la construction des 16 mondes avec **tous** les modificateurs, le contenu 3.5 (dalle qui rétrécit, tapis de vent, aimant, Atelier, Contre-la-montre, Défi des 5 boss), la sauvegarde 3.3 (code, copie de secours, gaucher), le contenu 3.2 (bumper, glace, mondes secrets, étoiles, chapeaux, traînées, Nuit noire / Sans checkpoint / Lumi miniature, astuces, rayon du boss, série de défis, égalisation audio), le comportement de chaque nouveau piège (lanceur, portail, interrupteur/pont, canon, tapis, clignotante, orbitale, ascenseur), le boss (réveil, tirs, coups, défaite, diamant), le mode infini et le classement, les défis et codes de partage, le fantôme, les runs, succès, apparences, sauvegarde, remappage des touches, versions et traductions, les 12 pages de menu dans les 10 langues (et la complétude de chaque traduction), les commandes tactiles, la manette, l'accessibilité, l'ombre et la caméra anti-traversée.
 
 ```bash
 godot --headless --path . --script tests/smoke.gd
@@ -369,7 +375,7 @@ Code de sortie 0 si tout passe.
 Un robot joue réellement les étapes (physique incluse, esquive des tirs, portails, interrupteurs) pour vérifier qu'elles sont **franchissables** ; dans un monde à boss, il réussit s'il atteint l'arène :
 
 ```bash
-godot --headless --path . --script tests/bot.gd -- 0 3        # seeds 0 à 2, 15 mondes chacune
+godot --headless --path . --script tests/bot.gd -- 0 3        # seeds 0 à 2, 16 mondes chacune
 BOTMODS="gravity=2,mirror,crumble,length=1" godot --headless --path . --script tests/bot.gd -- 0 2
 ```
 
@@ -395,7 +401,7 @@ GODOT=/chemin/godot tools/build_all.sh windows linux web macos          # Linux 
 .\tools\build_all.ps1 -Godot "C:\chemin\Godot_v4.3-stable_win64_console.exe"   # Windows
 ```
 
-Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-3.4.0-windows.zip`, `-linux`, `-web`, `-macos`, `-android.apk`).
+Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-3.5.0-windows.zip`, `-linux`, `-web`, `-macos`, `-android.apk`).
 
 | Cible | Résultat | Remarque |
 |---|---|---|
@@ -410,7 +416,7 @@ Les fichiers sont créés dans `build/` et zippés dans `dist/` (`DiamantRush3D-
 Le workflow [.github/workflows/build.yml](.github/workflows/build.yml) lance les tests puis construit toutes les versions et les joint à une **Release** quand tu pousses un tag :
 
 ```bash
-git tag v3.4.0 && git push origin v3.4.0
+git tag v3.5.0 && git push origin v3.5.0
 ```
 
 ### Page de boutique

@@ -9,7 +9,7 @@ const MUSIC := [
 	["world_04_recif", "Monde 4", true], ["world_05_toundra", "Monde 5", true], ["world_06_cristaux", "Monde 6", true],
 	["world_07_usine", "Monde 7", true], ["world_08_ruines", "Monde 8", true], ["world_09_marais", "Monde 9", true],
 	["world_10_volcan", "Monde 10", true], ["world_11_neon", "Monde 11", true], ["world_12_ciel", "Monde 12", true],
-	["world_13_abysses", "Monde secret 13", true], ["world_14_sucreries", "Monde secret 14", true], ["world_15_forteresse", "Monde secret 15", true],
+	["world_13_abysses", "Monde secret 13", true], ["world_14_sucreries", "Monde secret 14", true], ["world_15_forteresse", "Monde secret 15", true], ["world_16_atelier", "Monde secret 16", true],
 	["win", "Jingle : étape terminée", false], ["lose", "Jingle : run perdue", false], ["run_complete", "Jingle : fin de run", false],
 ]
 const SFX := [
