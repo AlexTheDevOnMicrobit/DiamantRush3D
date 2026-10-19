@@ -720,11 +720,9 @@ func _setup_audio() -> void:
 	sounds = Sfx.build_all()
 	# des fichiers dans audio/sfx/ remplacent les sons synthétisés
 	for n in sounds.keys():
-		for ext in ["ogg", "wav"]:
-			var p := "res://audio/sfx/%s.%s" % [n, ext]
-			if ResourceLoader.exists(p):
-				sounds[n] = load(p)
-				break
+		var found := _find_audio("res://audio/sfx/", String(n))
+		if found != "":
+			sounds[n] = load(found)
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -747,11 +745,30 @@ func play_sfx(sfx_name: String, pitch: float = 1.0, db: float = 0.0) -> void:
 			return
 
 
-func _load_music_file(file_name: String) -> AudioStream:
-	for ext in ["ogg", "wav", "mp3"]:
-		var p := "res://audio/music/%s.%s" % [file_name, ext]
-		if ResourceLoader.exists(p):
+## Cherche un fichier audio par nom : accepte .ogg, .wav, .mp3 et les doubles extensions (jump.ogg.wav),
+## ainsi que l'orthographe « loose » pour « lose ».
+func _find_audio(dir: String, file_name: String) -> String:
+	var names := [file_name]
+	if file_name == "lose":
+		names.append("loose")
+	for n in names:
+		for ext in ["ogg", "wav", "mp3", "ogg.wav", "wav.wav", "ogg.mp3", "mp3.mp3"]:
+			var p := "%s%s.%s" % [dir, n, ext]
+			if ResourceLoader.exists(p):
+				return p
+	return ""
+
+
+func _load_music_file(file_name: String, looped: bool = true) -> AudioStream:
+	var found := _find_audio("res://audio/music/", file_name)
+	if found == "":
+		found = _find_audio("res://audio/sfx/", file_name) if file_name == "lose" else ""
+	if found != "":
+		var p := found
+		if true:
 			var s: AudioStream = load(p)
+			if not looped:
+				return s
 			if s is AudioStreamOggVorbis:
 				(s as AudioStreamOggVorbis).loop = true
 			elif s is AudioStreamMP3:
@@ -791,10 +808,8 @@ func play_ambient(file_name: String) -> void:
 
 ## Jingle de fin ("win", "lose", "run_complete") : fichier audio/music/<nom>.ogg ou son synthétisé.
 func play_jingle(jingle_name: String) -> void:
-	var s := _load_music_file(jingle_name)
+	var s := _load_music_file(jingle_name, false)
 	if s:
-		if s is AudioStreamOggVorbis:
-			(s as AudioStreamOggVorbis).loop = false
 		_jingle_player.stream = s
 		_jingle_player.volume_db = linear_to_db(maxf(float(options["music"]), 0.0001))
 		_jingle_player.play()

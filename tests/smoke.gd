@@ -558,6 +558,8 @@ func _test_misc() -> void:
 	g.play_jingle("win")
 	g.play_jingle("run_complete")
 	g.stop_music()
+	check(g._find_audio("res://audio/sfx/", "jump") != "" and g._find_audio("res://audio/sfx/", "lose") != "", "fichiers audio à double extension reconnus (jump.ogg.wav, loose)")
+	check(g.sounds["jump"] is AudioStreamWAV and (g.sounds["jump"] as AudioStreamWAV).loop_mode == AudioStreamWAV.LOOP_DISABLED, "effet sonore chargé depuis le fichier et sans boucle")
 	check(g.sounds.has("boost") and g.sounds.has("achievement") and g.sounds.has("hit") and g.sounds.has("portal") and g.sounds.has("launch") and g.sounds.has("cannon") and g.sounds.has("run_complete"), "nouveaux sons synthétisés présents")
 	var f1 := float(g.options["text_scale"])
 	g.options["text_scale"] = 1.5
