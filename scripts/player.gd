@@ -25,6 +25,13 @@ var wind_t := 0.0
 var walk_phase := 0.0
 var invert_y := 1.0
 var wind_vec := Vector3.ZERO
+var world_ice := false
+var world_wind := false
+var boost_t := 0.0
+var wing_t := 0.0
+var rainbow := false
+var body_mat: StandardMaterial3D
+var look_speed := 2.6
 var jump_vel := JUMP_VEL
 var jumping := false # vrai tant que la montée vient d'un saut (coupable en relâchant Espace)
 
@@ -59,7 +66,9 @@ func _ready() -> void:
 	cs.position.y = 0.9
 	add_child(cs)
 
-	_build_robot()
+	var skin := Global.current_skin()
+	rainbow = skin["id"] == "rainbow"
+	_build_robot(skin["color"])
 
 	pivot = Node3D.new()
 	pivot.top_level = true
@@ -92,18 +101,19 @@ func _limb(parent: Node3D, pos: Vector3, radius: float, length: float, color: Co
 	return pv
 
 
-func _build_robot() -> void:
+func _build_robot(body_color: Color = Color(1.0, 0.55, 0.15)) -> void:
 	model = Node3D.new()
 	add_child(model)
 	body_root = Node3D.new()
 	model.add_child(body_root)
-	var orange := Color(1.0, 0.55, 0.15)
+	var orange := body_color
 	var steel := Color(0.8, 0.84, 0.9)
 
 	var torso := CapsuleMesh.new()
 	torso.radius = 0.3
 	torso.height = 0.8
-	_part(torso, orange, body_root, Vector3(0, 0.95, 0))
+	var tm := _part(torso, orange, body_root, Vector3(0, 0.95, 0))
+	body_mat = tm.material_override
 	var belt := CylinderMesh.new()
 	belt.top_radius = 0.31
 	belt.bottom_radius = 0.31
@@ -139,8 +149,13 @@ func _build_robot() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= event.relative.x * mouse_sens
-		pitch = clampf(pitch + event.relative.y * mouse_sens * invert_y, -0.2, 1.3)
+		look(event.relative)
+
+
+## Tourne la caméra (souris, doigt ou manette) ; rel en « pixels souris ».
+func look(rel: Vector2) -> void:
+	yaw -= rel.x * mouse_sens
+	pitch = clampf(pitch + rel.y * mouse_sens * invert_y, -0.2, 1.3)
 
 
 func _physics_process(delta: float) -> void:
@@ -151,24 +166,33 @@ func _physics_process(delta: float) -> void:
 			iv = -iv
 		dir = Basis(Vector3.UP, yaw) * Vector3(iv.x, 0, iv.y)
 
+	boost_t = maxf(boost_t - delta, 0.0)
+	wing_t = maxf(wing_t - delta, 0.0)
+	var look_v := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+	if look_v.length() > 0.0 and controls_enabled:
+		var s := float(Global.options["sens"]) * look_speed * delta
+		yaw -= look_v.x * s
+		pitch = clampf(pitch + look_v.y * s * invert_y, -0.2, 1.3)
+
 	wind_vec = Vector3.ZERO
-	if Global.mods["wind"]:
+	if Global.mods["wind"] or world_wind:
 		wind_t += delta
 		var ang := wind_t * 0.23
-		var power := 0.5 * (1.0 + sin(wind_t * 0.6)) * 3.2
+		var power := 0.5 * (1.0 + sin(wind_t * 0.6)) * (3.2 if Global.mods["wind"] else 2.0)
 		wind_vec = Vector3(cos(ang), 0, sin(ang)) * power
 
 	var on_floor := is_on_floor()
 	var accel := 60.0 if on_floor else 32.0
-	if Global.mods["ice"]:
+	if Global.mods["ice"] or world_ice:
 		accel = 5.0 if on_floor else 20.0
-	var target := dir * speed + wind_vec * (0.3 if on_floor else 1.0)
+	var cur_speed := speed * (1.4 if boost_t > 0.0 else 1.0)
+	var target := dir * cur_speed + wind_vec * (0.3 if on_floor else 1.0)
 	velocity.x = move_toward(velocity.x, target.x, accel * delta)
 	velocity.z = move_toward(velocity.z, target.z, accel * delta)
 
 	if on_floor:
 		coyote = 0.12
-		air_jumps = air_jumps_max
+		air_jumps = air_jumps_max + (1 if wing_t > 0.0 else 0)
 	else:
 		coyote -= delta
 		velocity.y = maxf(velocity.y - gravity * delta, -45.0)
@@ -208,6 +232,7 @@ func _jump(double: bool) -> void:
 	coyote = 0.0
 	buffer = 0.0
 	model.scale = Vector3(0.8, 1.25, 0.8)
+	Global.stats["jumps"] = int(Global.stats["jumps"]) + 1
 	Global.play_sfx("jump2" if double else "jump", 1.0, -3.0)
 	Fx.burst(get_parent(), global_position, Color(1, 1, 1, 0.8), 6 if not double else 10, 2.0, not double)
 
@@ -217,6 +242,8 @@ func _process(delta: float) -> void:
 	pivot.global_position = pivot.global_position.lerp(tgt, 1.0 - exp(-14.0 * delta))
 	pivot.rotation = Vector3(-pitch, yaw, 0)
 
+	if rainbow and body_mat:
+		body_mat.albedo_color = Color.from_hsv(fposmod(Time.get_ticks_msec() / 2500.0, 1.0), 0.7, 1.0)
 	# animation
 	model.scale = model.scale.lerp(Vector3.ONE, 1.0 - exp(-12.0 * delta))
 	var hspeed := Vector2(velocity.x, velocity.z).length()
@@ -246,6 +273,7 @@ func bounce(power: float) -> void:
 	coyote = 0.0
 	model.scale = Vector3(0.75, 1.35, 0.75)
 	Global.play_sfx("bounce")
+	Global.vibrate(30)
 	Fx.burst(get_parent(), global_position, Color(1.0, 0.5, 0.8), 14, 4.0)
 
 
@@ -253,3 +281,12 @@ func teleport(pos: Vector3) -> void:
 	global_position = pos
 	velocity = Vector3.ZERO
 	pivot.global_position = pos + Vector3(0, 1.3, 0)
+
+
+func add_effect(kind: String) -> void:
+	match kind:
+		"boost":
+			boost_t = 6.0
+		"wing":
+			wing_t = 12.0
+			air_jumps = air_jumps_max + 1

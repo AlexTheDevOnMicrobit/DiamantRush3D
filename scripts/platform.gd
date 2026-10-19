@@ -1,10 +1,15 @@
 extends AnimatableBody3D
-## Plateforme : n normale | m mobile | f qui tombe | c checkpoint | b trampoline | s tourniquet
+## Plateforme :
+##   n normale | m mobile | f friable | c checkpoint | b trampoline | s tourniquet
+##   k clignotante | v tapis roulant | o orbitale | l ascenseur
 
 const Models = preload("res://scripts/models.gd")
 const Textures = preload("res://scripts/textures.gd")
 const Decor = preload("res://scripts/decor.gd")
 const Fx = preload("res://scripts/fx.gd")
+
+const BLINK_ON := 1.8
+const BLINK_OFF := 1.1
 
 var kind := "n"
 var size := Vector3(4, 1, 4)
@@ -12,7 +17,8 @@ var top_color := Color.WHITE
 var side_color := Color(0.5, 0.4, 0.3)
 var theme_idx := 0
 var prop_seed := 0
-var move_axis := Vector3.RIGHT
+var move_axis := Vector3.RIGHT   # latéral (mobile, orbite)
+var forward := Vector3.FORWARD   # avant (orbite, tapis)
 var move_amp := 2.5
 var move_speed := 1.1
 var level = null
@@ -27,11 +33,15 @@ var _visual: Node3D
 var _mat: StandardMaterial3D
 var _col: CollisionShape3D
 var _beam: AnimatableBody3D
+var _blink_phase := 0.0
+var _solid := true
 
 
 func _ready() -> void:
 	sync_to_physics = true
 	_origin = position
+	_blink_phase = float(absi(prop_seed) % 1000) / 1000.0 * (BLINK_ON + BLINK_OFF)
+	_t = float(absi(prop_seed) % 628) / 100.0 if kind in ["m", "o", "l"] else 0.0
 
 	var tcol := top_color
 	match kind:
@@ -40,6 +50,10 @@ func _ready() -> void:
 		"c": tcol = Color(0.3, 0.55, 1.0)
 		"b": tcol = Color(1.0, 0.4, 0.75)
 		"s": tcol = top_color.darkened(0.25)
+		"k": tcol = Color(0.75, 0.45, 1.0)
+		"v": tcol = Color(0.28, 0.28, 0.32)
+		"o": tcol = Color(0.25, 0.85, 0.75)
+		"l": tcol = Color(1.0, 0.85, 0.25)
 
 	_visual = Node3D.new()
 	add_child(_visual)
@@ -67,10 +81,10 @@ func _ready() -> void:
 	_mat.albedo_texture = Textures.speckle(2)
 	_mat.uv1_triplanar = true
 	_mat.uv1_scale = Vector3(0.5, 0.5, 0.5)
-	if kind == "b":
+	if kind in ["b", "k", "o", "l"]:
 		_mat.emission_enabled = true
 		_mat.emission = tcol
-		_mat.emission_energy_multiplier = 0.8
+		_mat.emission_energy_multiplier = 0.6
 	slab.material_override = _mat
 	slab.position.y = size.y * 0.5 - 0.09
 	_visual.add_child(slab)
@@ -91,6 +105,21 @@ func _ready() -> void:
 	under.rotation.y = PI * 0.25
 	under.material_override = bmat
 	under_root.add_child(under)
+
+	# chevrons du tapis roulant
+	if kind == "v":
+		var dir := forward if int(absi(prop_seed) % 2) == 0 else -forward
+		constant_linear_velocity = dir * 3.0
+		var along_x := absf(dir.x) > 0.5
+		for j in 3:
+			var chev := MeshInstance3D.new()
+			var cb := BoxMesh.new()
+			cb.size = Vector3(0.25, 0.04, size.z * 0.8) if along_x else Vector3(size.x * 0.8, 0.04, 0.25)
+			chev.mesh = cb
+			chev.material_override = Models.material(Color(1.0, 0.85, 0.1), 1.0)
+			var off := (j - 1) * 1.1
+			chev.position = Vector3(off * signf(dir.x) if along_x else 0.0, size.y * 0.5 + 0.02, off * signf(dir.z) if not along_x else 0.0)
+			_visual.add_child(chev)
 
 	# accessoire décoratif sur les dalles fixes
 	if kind in ["n", "c", "f"] and size.x >= 3.0 and size.z >= 3.0:
@@ -142,15 +171,44 @@ func _ready() -> void:
 		add_child(_beam)
 
 
+func is_solid() -> bool:
+	return _solid
+
+
+## Temps restant avant que la dalle clignotante ne disparaisse (grand si non clignotante).
+func solid_time_left() -> float:
+	if kind != "k":
+		return 99.0
+	var c := fposmod(_t + _blink_phase, BLINK_ON + BLINK_OFF)
+	return (BLINK_ON - c) if c < BLINK_ON else 0.0
+
+
 func _physics_process(delta: float) -> void:
 	match kind:
 		"m":
 			_t += delta
 			position = _origin + move_axis * sin(_t * move_speed) * move_amp
+		"o":
+			_t += delta
+			var a := _t * 0.9
+			position = _origin + move_axis * cos(a) * 2.0 + forward * sin(a) * 2.0
+		"l":
+			_t += delta
+			position = _origin + Vector3(0, sin(_t * 0.8) * 1.6, 0)
 		"f":
 			_update_fall(delta)
 		"s":
 			_beam.rotation.y += delta * 1.8
+		"k":
+			_t += delta
+			var c := fposmod(_t + _blink_phase, BLINK_ON + BLINK_OFF)
+			var on := c < BLINK_ON
+			if on != _solid:
+				_solid = on
+				_col.disabled = not on
+				_visual.visible = on
+			if on and c > BLINK_ON - 0.45:
+				_visual.visible = int(c * 14.0) % 2 == 0 # avertissement : la dalle clignote vite
 
 
 func _update_fall(delta: float) -> void:

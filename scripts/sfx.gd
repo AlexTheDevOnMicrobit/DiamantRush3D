@@ -71,20 +71,21 @@ static func build_all() -> Dictionary:
 static func music(theme: int) -> AudioStreamWAV:
 	var rate := 11025
 	var scales := [
-		[0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 2, 3, 7, 8], [0, 1, 5, 7, 8], [0, 2, 7, 9, 12],
+		[0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 2, 3, 7, 8], [0, 1, 5, 7, 8], [0, 2, 7, 9, 12], [0, 4, 7, 11, 14],
 	]
-	var roots: Array[float] = [196.0, 220.0, 174.6, 146.8, 233.1]
-	var tempo: Array[float] = [0.16, 0.2, 0.18, 0.14, 0.22] # durée d'une croche
-	var step: float = tempo[theme]
-	var scale: Array = scales[theme]
-	var root: float = roots[theme]
+	var roots: Array[float] = [196.0, 174.6, 220.0, 207.7, 164.8, 174.6, 130.8, 196.0, 146.8, 146.8, 185.0, 233.1]
+	var tempo: Array[float] = [0.16, 0.2, 0.17, 0.15, 0.22, 0.18, 0.13, 0.19, 0.24, 0.14, 0.12, 0.22]
+	var theme_i := clampi(theme, 0, 11)
+	var step: float = tempo[theme_i]
+	var scale: Array = scales[theme_i % scales.size()]
+	var root: float = roots[theme_i]
 	var bars := 8
 	var per_bar := 8
 	var total := int(step * per_bar * bars * rate)
 	var buf := PackedFloat32Array()
 	buf.resize(total)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 100 + theme
+	rng.seed = 100 + theme_i
 	var prog := [0, 3, 4, 0, 2, 3, 4, 0]
 	for b in bars:
 		var bar_start := int(b * per_bar * step * rate)

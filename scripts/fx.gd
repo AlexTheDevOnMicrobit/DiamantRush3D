@@ -41,10 +41,10 @@ static func burst(parent: Node, pos: Vector3, color: Color, amount: int = 12, sp
 
 
 ## Particules d'ambiance qui restent autour du joueur.
-static func ambient(parent: Node3D, theme_idx: int, color: Color) -> void:
+static func ambient(parent: Node3D, theme_idx: int, color: Color, quality: int = 2) -> void:
 	var p := CPUParticles3D.new()
 	p.mesh = _mesh(color, 0.06)
-	p.amount = 70
+	p.amount = [20, 40, 70][clampi(quality, 0, 2)]
 	p.lifetime = 7.0
 	p.preprocess = 7.0
 	p.local_coords = false
@@ -54,11 +54,20 @@ static func ambient(parent: Node3D, theme_idx: int, color: Color) -> void:
 	p.spread = 180.0
 	p.initial_velocity_min = 0.2
 	p.initial_velocity_max = 0.8
-	match theme_idx:
-		0: p.gravity = Vector3(0.6, -0.5, 0.2)   # pétales
-		1: p.gravity = Vector3(1.8, -0.2, 0.4)   # sable
-		2: p.gravity = Vector3(0, 0.25, 0)       # lucioles
-		3: p.gravity = Vector3(0, 1.4, 0)        # braises
-		_: p.gravity = Vector3(0, 0, 0)          # poussière d'étoiles
+	var grav := [
+		Vector3(0.6, -0.5, 0.2),    # 0 pétales
+		Vector3(0.2, 0.15, 0.1),    # 1 lucioles
+		Vector3(1.8, -0.2, 0.4),    # 2 sable
+		Vector3(0.0, 0.9, 0.0),     # 3 bulles
+		Vector3(0.8, -1.4, 0.3),    # 4 neige
+		Vector3(0.0, 0.25, 0.0),    # 5 lucioles de cristal
+		Vector3(0.0, 1.2, 0.0),     # 6 étincelles
+		Vector3(0.3, -0.3, 0.2),    # 7 poussière dorée
+		Vector3(0.0, 0.3, 0.0),     # 8 feux follets
+		Vector3(0.0, 1.4, 0.0),     # 9 braises
+		Vector3(0.0, -0.6, 0.0),    # 10 pluie néon
+		Vector3.ZERO,               # 11 poussière d'étoiles
+	]
+	p.gravity = grav[clampi(theme_idx, 0, grav.size() - 1)]
 	parent.add_child(p)
 	p.emitting = true

@@ -39,3 +39,18 @@ static func speckle(seed_v: int = 2) -> ImageTexture:
 	var tex := ImageTexture.create_from_image(img)
 	_cache[key] = tex
 	return tex
+
+
+## Grille néon (lignes claires sur fond noir).
+static func grid() -> ImageTexture:
+	if _cache.has(2000):
+		return _cache[2000]
+	var img := Image.create(64, 64, true, Image.FORMAT_RGBA8)
+	for y in 64:
+		for x in 64:
+			var line := x < 2 or y < 2
+			img.set_pixel(x, y, Color(1, 1, 1, 1) if line else Color(0.02, 0.02, 0.05, 1))
+	img.generate_mipmaps()
+	var tex := ImageTexture.create_from_image(img)
+	_cache[2000] = tex
+	return tex

@@ -12,7 +12,7 @@ func _initialize():
 	g.reset_mods(false)
 	var bm := OS.get_environment('BOTMODS')
 	for m in bm.split(',', false):
-		if m.begins_with('gravity='): g.mods['gravity'] = int(m.split('=')[1])
+		if '=' in m: g.mods[m.split('=')[0]] = int(m.split('=')[1])
 		else: g.mods[m] = true
 	var s0 := int(args[0]); var s1 := int(args[1])
 	Engine.physics_ticks_per_second = 600
@@ -21,7 +21,7 @@ func _initialize():
 	Engine.max_physics_steps_per_frame = 16
 	var ok := 0; var tot := 0; var fails := []
 	for sd in range(s0, s1):
-		for st in 5:
+		for st in 12:
 			if args.size() > 3 and st != int(args[3]): continue
 			var r = await run_stage(sd * 13 + 5, st)
 			tot += 1
@@ -33,7 +33,8 @@ func _initialize():
 
 func run_stage(seed_v: int, stage: int) -> Dictionary:
 	g.reset_run(seed_v)
-	g.run["stage"] = stage
+	g.run["stages"] = [stage]
+	g.run["mode"] = "free"
 	var lv = load("res://scenes/level.tscn").instantiate()
 	root.add_child(lv)
 	await physics_frame
@@ -46,6 +47,7 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 	var pending := false
 	var last_pp := Vector3.ZERO
 	var kinds = lv.data["steps"]
+	var plats = lv.platforms
 	var n: int = lv.platforms.size()
 	while lv.state == "play" and t < (60.0 if OS.get_cmdline_user_args().size() > 2 else 260.0):
 		await physics_frame
@@ -79,7 +81,8 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 		pl.yaw = atan2(-dir.x, -dir.z)
 		if false and OS.get_cmdline_user_args().size() > 2:
 			print('  dbg t=', snappedf(t,0.1), ' pp=', pp, ' cur=', cur, ' tp=', tp, ' floor=', pl.is_on_floor(), ' vy=', pl.velocity.y, ' tgt_now=', lv.platforms[mini(cur+1,n-1)].global_position)
-		var tkind: String = "n" if ti == 0 else str(kinds[ti - 1][5])
+		var tkind: String = str(plats[ti].kind)
+		var tpl = plats[ti]
 		var move := true
 		var want_jump := false
 		if pl.is_on_floor():
@@ -87,9 +90,21 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 			var nxt: Vector3 = pp + dir * 0.7
 			var loc2 = nxt - cp.global_position
 			var outside: bool = absf(loc2.x) > cp.size.x / 2.0 or absf(loc2.z) > cp.size.z / 2.0
-			if outside and ti != cur:
+			if str(cp.kind) == 'k' and cp.solid_time_left() < 0.5 and ti != cur:
+				want_jump = true
+			elif outside and ti != cur:
 				var tg: float = 3.0 if ti == 0 else float(kinds[ti - 1][0])
-				if tkind == "m" and dist > tg + 3.2:
+				var nominal := Vector2(tpl._origin.x - pp.x, tpl._origin.z - pp.z).length()
+				var stable: bool = str(cp.kind) in ['n', 'c', 's', 'v', 'b']
+				if not stable:
+					want_jump = true # on n'attend pas sur une dalle instable
+				elif tkind == "m" and dist > tg + 3.2:
+					move = false
+				elif tkind == "o" and dist > nominal + 0.3:
+					move = false
+				elif tkind == "l" and absf(tpl.global_position.y - tpl._origin.y) > 0.6:
+					move = false
+				elif tkind == "k" and tpl.solid_time_left() < 1.1:
 					move = false
 				else:
 					want_jump = true
@@ -112,6 +127,6 @@ func run_stage(seed_v: int, stage: int) -> Dictionary:
 				Input.action_press("jump"); jump_hold = 30
 	print("END state=", lv.state, " pp=", pl.global_position, " panels=", lv.panel_nodes.size())
 	Input.action_release("forward"); Input.action_release("jump")
-	var res = {"win": lv.state == "won", "t": t, "deaths": lv.deaths, "cur": cur, "n": n, "kind": ("n" if cur + 1 >= n else str(kinds[cur][5]))}
+	var res = {"win": lv.state == "won", "t": t, "deaths": lv.deaths, "cur": cur, "n": n, "kind": ("n" if cur + 1 >= n else str(plats[mini(cur + 1, n - 1)].kind))}
 	root.remove_child(lv); lv.free()
 	return res

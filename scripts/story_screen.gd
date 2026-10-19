@@ -16,7 +16,7 @@ func _ready() -> void:
 	info = Global.pending_story
 	if info.is_empty():
 		info = {"title": "", "text": "", "theme": 0, "next": "menu", "button": "Continuer"}
-	var theme: Dictionary = LevelData.get_themes()[int(info["theme"])]
+	var theme: Dictionary = LevelData.get_themes()[clampi(int(info["theme"]), 0, LevelData.WORLD_COUNT - 1)]
 	Global.stop_music()
 
 	var bg := ColorRect.new()
@@ -48,7 +48,7 @@ func _ready() -> void:
 	var row := CenterContainer.new()
 	row.add_child(UI.button(String(info["button"]), _continue))
 	vb.add_child(row)
-	vb.add_child(UI.label("Espace / Entrée : continuer", 16, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_CENTER))
+	vb.add_child(UI.label("Espace / Entrée / toucher l'écran : continuer", 16, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_CENTER))
 
 	var dur := clampf(String(info["text"]).length() * 0.025, 1.0, 9.0)
 	tween = create_tween()
@@ -77,6 +77,7 @@ func _continue() -> void:
 		return
 	leaving = true
 	Global.play_sfx("click")
+	Global.save_game()
 	match String(info["next"]):
 		"stage_story":
 			Global.show_stage_story()
